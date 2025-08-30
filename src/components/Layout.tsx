@@ -97,7 +97,7 @@ export const Layout: React.FC<LayoutProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => window.open("/nav", "_blank")}>
+                onClick={() => window.open("/", "_blank")}>
                 Switch Portal
               </Button>
               <div className='hidden md:flex items-center space-x-2'>
