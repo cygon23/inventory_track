@@ -1,0 +1,257 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Lion Track Safari Design System - Safari-themed earth tones
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Safari Theme - Warm Earth Tones */
+    --background: 39 45% 96%;
+    --foreground: 25 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 30% 15%;
+
+    /* Primary Safari Brown - #725640 */
+    --primary: 25 25% 35%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 25 35% 45%;
+    --primary-dark: 25 20% 25%;
+
+    /* Secondary warm tones */
+    --secondary: 35 25% 85%;
+    --secondary-foreground: 25 30% 15%;
+    --secondary-warm: 30 40% 75%;
+
+    /* Safari accent colors */
+    --muted: 35 20% 88%;
+    --muted-foreground: 25 15% 45%;
+
+    --accent: 35 40% 80%;
+    --accent-foreground: 25 30% 15%;
+    --accent-gold: 45 60% 70%;
+    --accent-rust: 15 45% 55%;
+
+    /* Functional colors */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 120 50% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 85% 50%;
+    --warning-foreground: 25 30% 15%;
+
+    --border: 35 15% 85%;
+    --input: 35 15% 90%;
+    --ring: 25 25% 35%;
+
+    /* Safari gradients */
+    --gradient-safari: linear-gradient(135deg, hsl(25 25% 35%), hsl(25 35% 45%));
+    --gradient-sunset: linear-gradient(135deg, hsl(15 45% 55%), hsl(45 60% 70%));
+    --gradient-earth: linear-gradient(180deg, hsl(35 25% 85%), hsl(35 20% 88%));
+    --gradient-warm: linear-gradient(135deg, hsl(30 40% 75%), hsl(35 25% 85%));
+
+    /* Safari shadows */
+    --shadow-safari: 0 10px 30px -10px hsl(25 25% 35% / 0.3);
+    --shadow-warm: 0 4px 12px -2px hsl(25 20% 25% / 0.15);
+    --shadow-elevated: 0 20px 50px -15px hsl(25 25% 35% / 0.4);
+
+    /* Animation timings */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode with warm safari tones */
+    --background: 25 15% 8%;
+    --foreground: 35 25% 92%;
+
+    --card: 25 12% 12%;
+    --card-foreground: 35 25% 92%;
+
+    --popover: 25 12% 12%;
+    --popover-foreground: 35 25% 92%;
+
+    /* Primary safari brown maintained in dark mode */
+    --primary: 25 35% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 25 45% 55%;
+    --primary-dark: 25 20% 25%;
+
+    /* Darker secondary tones */
+    --secondary: 25 10% 18%;
+    --secondary-foreground: 35 25% 92%;
+    --secondary-warm: 30 15% 22%;
+
+    /* Dark muted colors */
+    --muted: 25 8% 15%;
+    --muted-foreground: 25 12% 65%;
+
+    --accent: 25 10% 20%;
+    --accent-foreground: 35 25% 92%;
+    --accent-gold: 45 50% 60%;
+    --accent-rust: 15 35% 45%;
+
+    /* Functional colors for dark mode */
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 120 40% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 75% 45%;
+    --warning-foreground: 25 30% 15%;
+
+    --border: 25 8% 20%;
+    --input: 25 8% 18%;
+    --ring: 25 35% 45%;
+
+    /* Dark mode gradients */
+    --gradient-safari: linear-gradient(135deg, hsl(25 35% 35%), hsl(25 45% 45%));
+    --gradient-sunset: linear-gradient(135deg, hsl(15 35% 45%), hsl(45 50% 60%));
+    --gradient-earth: linear-gradient(180deg, hsl(25 10% 18%), hsl(25 8% 15%));
+    --gradient-warm: linear-gradient(135deg, hsl(30 15% 22%), hsl(25 10% 18%));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Safari-themed animations */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes progress-fill {
+    from {
+      width: 0%;
+    }
+    to {
+      width: var(--progress-width);
+    }
+  }
+
+  @keyframes safari-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(25 25% 35% / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(25 35% 45% / 0.5);
+    }
+  }
+
+  @keyframes gentle-bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
+  }
+}
+
+@layer components {
+  /* Safari-themed component styles */
+  .safari-card {
+    @apply bg-card border border-border rounded-xl shadow-[var(--shadow-warm)] transition-all duration-300;
+  }
+
+  .safari-card:hover {
+    @apply shadow-[var(--shadow-safari)] transform scale-105;
+  }
+
+  .safari-gradient {
+    background: var(--gradient-safari);
+  }
+
+  .sunset-gradient {
+    background: var(--gradient-sunset);
+  }
+
+  .earth-gradient {
+    background: var(--gradient-earth);
+  }
+
+  .warm-gradient {
+    background: var(--gradient-warm);
+  }
+
+  .safari-glow {
+    animation: safari-glow 2s ease-in-out infinite;
+  }
+
+  .fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+  }
+
+  .gentle-bounce {
+    animation: gentle-bounce 2s ease-in-out infinite;
+  }
+
+  /* Journey progress styles */
+  .journey-step {
+    @apply relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-500;
+  }
+
+  .journey-step.completed {
+    @apply bg-primary border-primary text-primary-foreground;
+  }
+
+  .journey-step.active {
+    @apply bg-accent-gold border-accent-gold text-foreground safari-glow;
+  }
+
+  .journey-step.pending {
+    @apply bg-background border-border text-muted-foreground;
+  }
+
+  .journey-connector {
+    @apply flex-1 h-0.5 bg-border transition-all duration-500;
+  }
+
+  .journey-connector.completed {
+    @apply bg-primary;
+  }
+}
