@@ -1,0 +1,200 @@
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { 
+  LayoutDashboard, 
+  MessageSquare, 
+  Users, 
+  Calendar, 
+  UserCheck, 
+  MapPin, 
+  DollarSign, 
+  BarChart3, 
+  Settings,
+  Car,
+  Headphones,
+  FileText,
+  Shield,
+  Route
+} from 'lucide-react';
+import { User, rolePermissions } from '@/data/mockUsers';
+import { Badge } from '@/components/ui/badge';
+
+interface DashboardSidebarProps {
+  currentUser: User;
+}
+
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser }) => {
+  const location = useLocation();
+
+  const allMenuItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      path: `/${getRolePrefix(currentUser.role)}/dashboard`,
+      permission: 'dashboard'
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      icon: MessageSquare,
+      path: `/${getRolePrefix(currentUser.role)}/messages`,
+      permission: 'messages',
+      badge: 12
+    },
+    {
+      id: 'customers',
+      label: 'Customers',
+      icon: Users,
+      path: `/${getRolePrefix(currentUser.role)}/customers`,
+      permission: 'customers'
+    },
+    {
+      id: 'bookings',
+      label: 'Bookings',
+      icon: Calendar,
+      path: `/${getRolePrefix(currentUser.role)}/bookings`,
+      permission: 'bookings'
+    },
+    {
+      id: 'my_trips',
+      label: 'My Trips',
+      icon: Route,
+      path: `/driver/trips`,
+      permission: 'my_trips'
+    },
+    {
+      id: 'trips',
+      label: 'Trip Management',
+      icon: MapPin,
+      path: `/operations/trips`,
+      permission: 'trips'
+    },
+    {
+      id: 'drivers',
+      label: 'Driver Assignment',
+      icon: Car,
+      path: `/operations/drivers`,
+      permission: 'drivers'
+    },
+    {
+      id: 'vehicles',
+      label: 'Vehicle Management',
+      icon: Car,
+      path: `/operations/vehicles`,
+      permission: 'vehicles'
+    },
+    {
+      id: 'payments',
+      label: 'Payments',
+      icon: DollarSign,
+      path: `/finance/payments`,
+      permission: 'payments'
+    },
+    {
+      id: 'invoices',
+      label: 'Invoicing',
+      icon: FileText,
+      path: `/finance/invoices`,
+      permission: 'invoices'
+    },
+    {
+      id: 'support',
+      label: 'Customer Support',
+      icon: Headphones,
+      path: `/support/tickets`,
+      permission: 'support'
+    },
+    {
+      id: 'faq',
+      label: 'FAQ Management',
+      icon: FileText,
+      path: `/support/faq`,
+      permission: 'faq'
+    },
+    {
+      id: 'staff',
+      label: 'Staff Management',
+      icon: UserCheck,
+      path: `/${getRolePrefix(currentUser.role)}/staff`,
+      permission: 'staff'
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: BarChart3,
+      path: `/${getRolePrefix(currentUser.role)}/reports`,
+      permission: 'reports'
+    },
+    {
+      id: 'settings',
+      label: 'System Settings',
+      icon: Settings,
+      path: `/admin/settings`,
+      permission: 'settings'
+    },
+    {
+      id: 'users',
+      label: 'User Management',
+      icon: Shield,
+      path: `/admin/users`,
+      permission: 'users'
+    }
+  ];
+
+  function getRolePrefix(role: string): string {
+    const prefixMap: { [key: string]: string } = {
+      'super_admin': 'admin',
+      'admin': 'admin',
+      'admin_helper': 'admin',
+      'booking_manager': 'booking',
+      'operations_coordinator': 'operations',
+      'driver': 'driver',
+      'finance_officer': 'finance',
+      'customer_service': 'support'
+    };
+    return prefixMap[role] || 'admin';
+  }
+
+  const userPermissions = rolePermissions[currentUser.role] || [];
+  const visibleMenuItems = allMenuItems.filter(item => 
+    userPermissions.includes(item.permission)
+  );
+
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border">
+      <div className="p-4">
+        <nav className="space-y-2">
+          {visibleMenuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.id}
+                to={item.path}
+                className={cn(
+                  "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                  isActive(item.path)
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="flex-1">{item.label}</span>
+                {item.badge && (
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+      </div>
+    </aside>
+  );
+};
+
+export default DashboardSidebar;

@@ -1,37 +1,261 @@
+import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ClientDashboard from "./pages/ClientDashboard";
-import StaffDashboard from "./pages/StaffDashboard";
-import FieldDashboard from "./pages/FieldDashboard";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./components/auth/LoginPage";
+import DashboardLayout from "./components/layout/DashboardLayout";
+import AdminDashboard from "./components/dashboard/AdminDashboard";
+import CentralizedMessages from "./components/messaging/CentralizedMessages";
+import BookingManagement from "./components/booking/BookingManagement";
 import { NavigationSwitcher } from "./components/NavigationSwitcher";
 import NotFound from "./pages/NotFound";
+import { User, mockCurrentUser } from "./data/mockUsers";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path='/' element={<NavigationSwitcher />} />
-          {/* <Route path="/" element={<ClientDashboard />} /> */}
-          <Route path='/client' element={<ClientDashboard />} />
-          <Route path='/staff' element={<StaffDashboard />} />
-          <Route path='/staff/clients' element={<StaffDashboard />} />
-          <Route path='/staff/analytics' element={<StaffDashboard />} />
-          <Route path='/field' element={<FieldDashboard />} />
-          <Route path='/field/schedule' element={<FieldDashboard />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path='*' element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
+
+  if (!currentUser) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path='/nav' element={<NavigationSwitcher />} />
+              <Route path='*' element={<LoginPage onLogin={handleLogin} />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path='/nav' element={<NavigationSwitcher />} />
+            <Route
+              path='/'
+              element={
+                <Navigate
+                  to={`/${getRolePrefix(currentUser.role)}/dashboard`}
+                  replace
+                />
+              }
+            />
+
+            {/* Admin Routes */}
+            <Route
+              path='/admin'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route
+                path='messages'
+                element={<CentralizedMessages currentUser={currentUser} />}
+              />
+              <Route
+                path='customers'
+                element={<div>Customer Management (Coming Soon)</div>}
+              />
+              <Route
+                path='bookings'
+                element={<BookingManagement currentUser={currentUser} />}
+              />
+              <Route
+                path='staff'
+                element={<div>Staff Management (Coming Soon)</div>}
+              />
+              <Route
+                path='reports'
+                element={<div>Reports (Coming Soon)</div>}
+              />
+              <Route
+                path='settings'
+                element={<div>System Settings (Coming Soon)</div>}
+              />
+              <Route
+                path='users'
+                element={<div>User Management (Coming Soon)</div>}
+              />
+            </Route>
+
+            {/* Booking Manager Routes */}
+            <Route
+              path='/booking'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route
+                path='messages'
+                element={<CentralizedMessages currentUser={currentUser} />}
+              />
+              <Route
+                path='customers'
+                element={<div>Customer Management (Coming Soon)</div>}
+              />
+              <Route
+                path='bookings'
+                element={<BookingManagement currentUser={currentUser} />}
+              />
+            </Route>
+
+            {/* Operations Routes */}
+            <Route
+              path='/operations'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route
+                path='messages'
+                element={<CentralizedMessages currentUser={currentUser} />}
+              />
+              <Route
+                path='trips'
+                element={<div>Trip Management (Coming Soon)</div>}
+              />
+              <Route
+                path='drivers'
+                element={<div>Driver Assignment (Coming Soon)</div>}
+              />
+              <Route
+                path='vehicles'
+                element={<div>Vehicle Management (Coming Soon)</div>}
+              />
+            </Route>
+
+            {/* Driver Routes */}
+            <Route
+              path='/driver'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route path='trips' element={<div>My Trips (Coming Soon)</div>} />
+              <Route
+                path='reports'
+                element={<div>Trip Reports (Coming Soon)</div>}
+              />
+            </Route>
+
+            {/* Finance Routes */}
+            <Route
+              path='/finance'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route
+                path='payments'
+                element={<div>Payment Management (Coming Soon)</div>}
+              />
+              <Route
+                path='invoices'
+                element={<div>Invoice Management (Coming Soon)</div>}
+              />
+              <Route
+                path='reports'
+                element={<div>Financial Reports (Coming Soon)</div>}
+              />
+            </Route>
+
+            {/* Customer Service Routes */}
+            <Route
+              path='/support'
+              element={
+                <DashboardLayout
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                />
+              }>
+              <Route
+                path='dashboard'
+                element={<AdminDashboard currentUser={currentUser} />}
+              />
+              <Route
+                path='messages'
+                element={<CentralizedMessages currentUser={currentUser} />}
+              />
+              <Route
+                path='tickets'
+                element={<div>Support Tickets (Coming Soon)</div>}
+              />
+              <Route
+                path='faq'
+                element={<div>FAQ Management (Coming Soon)</div>}
+              />
+            </Route>
+
+            <Route path='*' element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+function getRolePrefix(role: string): string {
+  const prefixMap: { [key: string]: string } = {
+    super_admin: "admin",
+    admin: "admin",
+    admin_helper: "admin",
+    booking_manager: "booking",
+    operations_coordinator: "operations",
+    driver: "driver",
+    finance_officer: "finance",
+    customer_service: "support",
+  };
+  return prefixMap[role] || "admin";
+}
 
 export default App;
