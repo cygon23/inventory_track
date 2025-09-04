@@ -9,16 +9,18 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Bell, MessageSquare, Settings, LogOut, MapPin, Search } from 'lucide-react';
+import { Bell, MessageSquare, Settings, LogOut, MapPin, Search, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { User, roleColors } from '@/data/mockUsers';
 
 interface DashboardHeaderProps {
   currentUser: User;
   onLogout: () => void;
+  onMenuClick: () => void;
+  isMobile: boolean;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout, onMenuClick, isMobile }) => {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -30,31 +32,40 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shadow-warm">
-      {/* Left side - Logo and Search */}
-      <div className="flex items-center space-x-6">
+    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 md:px-6 shadow-warm relative z-30">
+      {/* Left side - Menu Button (Mobile) + Logo and Search */}
+      <div className="flex items-center space-x-4 md:space-x-6 flex-1">
+        {/* Mobile menu button */}
+        {isMobile && (
+          <Button variant="ghost" size="sm" onClick={onMenuClick}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-gradient-safari rounded-lg flex items-center justify-center">
             <MapPin className="h-4 w-4 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Lion Track Safari</h1>
+            <h1 className="text-lg font-semibold text-foreground hidden sm:block">Lion Track Safari</h1>
+            <h1 className="text-sm font-semibold text-foreground sm:hidden">LTS</h1>
           </div>
         </div>
 
-        <div className="relative">
+        {/* Search - hidden on mobile */}
+        <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search customers, bookings..."
-            className="pl-10 w-80"
+            className="pl-10 w-60 lg:w-80"
           />
         </div>
       </div>
 
       {/* Right side - Notifications and User Menu */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 md:space-x-4">
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
+        <Button variant="ghost" size="sm" className="relative hidden sm:flex">
           <Bell className="h-5 w-5" />
           <Badge className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs px-1 min-w-[1.25rem] h-5">
             3
@@ -62,7 +73,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout
         </Button>
 
         {/* Messages */}
-        <Button variant="ghost" size="sm" className="relative">
+        <Button variant="ghost" size="sm" className="relative hidden sm:flex">
           <MessageSquare className="h-5 w-5" />
           <Badge className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 min-w-[1.25rem] h-5">
             12
@@ -72,9 +83,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center space-x-3 p-2">
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
+            <Button variant="ghost" className="flex items-center space-x-2 md:space-x-3 p-2">
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <div className="text-right hidden md:block">
                   <div className="text-sm font-medium">{currentUser.name}</div>
                   <div className="flex items-center space-x-2">
                     <Badge className={`text-xs ${roleColors[currentUser.role]}`}>

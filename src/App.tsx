@@ -7,11 +7,18 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./components/auth/LoginPage";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import AdminDashboard from "./components/dashboard/AdminDashboard";
+import BookingManagerDashboard from "./components/dashboard/BookingManagerDashboard";
+import DriverDashboard from "./components/dashboard/DriverDashboard";
+import OperationsDashboard from "./components/dashboard/OperationsDashboard";
 import CentralizedMessages from "./components/messaging/CentralizedMessages";
 import BookingManagement from "./components/booking/BookingManagement";
 import { NavigationSwitcher } from "./components/NavigationSwitcher";
 import NotFound from "./pages/NotFound";
 import { User, mockCurrentUser } from "./data/mockUsers";
+import CustomerManagement from "./components/customer/CustomerManagement";
+import TripManagement from "./components/operations/TripManagement";
+import DriverAssignment from "./components/operations/DriverAssignment";
+import VehicleManagement from "./components/operations/VehicleManagement";
 
 const queryClient = new QueryClient();
 
@@ -80,7 +87,7 @@ const App = () => {
               />
               <Route
                 path='customers'
-                element={<div>Customer Management (Coming Soon)</div>}
+                element={<CustomerManagement currentUser={currentUser} />}
               />
               <Route
                 path='bookings'
@@ -115,7 +122,7 @@ const App = () => {
               }>
               <Route
                 path='dashboard'
-                element={<AdminDashboard currentUser={currentUser} />}
+                element={<BookingManagerDashboard currentUser={currentUser} />}
               />
               <Route
                 path='messages'
@@ -123,7 +130,7 @@ const App = () => {
               />
               <Route
                 path='customers'
-                element={<div>Customer Management (Coming Soon)</div>}
+                element={<CustomerManagement currentUser={currentUser} />}
               />
               <Route
                 path='bookings'
@@ -142,7 +149,7 @@ const App = () => {
               }>
               <Route
                 path='dashboard'
-                element={<AdminDashboard currentUser={currentUser} />}
+                element={<OperationsDashboard currentUser={currentUser} />}
               />
               <Route
                 path='messages'
@@ -150,15 +157,15 @@ const App = () => {
               />
               <Route
                 path='trips'
-                element={<div>Trip Management (Coming Soon)</div>}
+                element={<TripManagement currentUser={currentUser} />}
               />
               <Route
                 path='drivers'
-                element={<div>Driver Assignment (Coming Soon)</div>}
+                element={<DriverAssignment currentUser={currentUser} />}
               />
               <Route
                 path='vehicles'
-                element={<div>Vehicle Management (Coming Soon)</div>}
+                element={<VehicleManagement currentUser={currentUser} />}
               />
             </Route>
 
@@ -173,7 +180,7 @@ const App = () => {
               }>
               <Route
                 path='dashboard'
-                element={<AdminDashboard currentUser={currentUser} />}
+                element={<DriverDashboard currentUser={currentUser} />}
               />
               <Route path='trips' element={<div>My Trips (Coming Soon)</div>} />
               <Route

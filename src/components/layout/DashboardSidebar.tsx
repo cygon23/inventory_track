@@ -22,9 +22,12 @@ import { Badge } from '@/components/ui/badge';
 
 interface DashboardSidebarProps {
   currentUser: User;
+  isOpen: boolean;
+  onClose: () => void;
+  isMobile: boolean;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser, isOpen, onClose, isMobile }) => {
   const location = useLocation();
 
   const allMenuItems = [
@@ -165,7 +168,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser }) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border">
+    <aside className={cn(
+      "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-20",
+      isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
+    )}>
       <div className="p-4">
         <nav className="space-y-2">
           {visibleMenuItems.map((item) => {
@@ -174,6 +180,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser }) => {
               <NavLink
                 key={item.id}
                 to={item.path}
+                onClick={isMobile ? onClose : undefined}
                 className={cn(
                   "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
                   isActive(item.path)
