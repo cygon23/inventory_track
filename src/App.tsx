@@ -19,6 +19,13 @@ import CustomerManagement from "./components/customer/CustomerManagement";
 import TripManagement from "./components/operations/TripManagement";
 import DriverAssignment from "./components/operations/DriverAssignment";
 import VehicleManagement from "./components/operations/VehicleManagement";
+import MyTrips from "./components/driver/MyTrips";
+import TripReports from "./components/driver/TripReports";
+import PaymentManagement from "./components/finance/PaymentManagement";
+import InvoiceManagement from "./components/finance/InvoiceManagement";
+import FinancialReports from "./components/finance/FinancialReports";
+import SupportTickets from "./components/support/SupportTickets";
+import FAQManagement from "./components/support/FAQManagement";
 
 const queryClient = new QueryClient();
 
@@ -182,10 +189,10 @@ const App = () => {
                 path='dashboard'
                 element={<DriverDashboard currentUser={currentUser} />}
               />
-              <Route path='trips' element={<div>My Trips (Coming Soon)</div>} />
+              <Route path='trips' element={<MyTrips currentUser={currentUser} />} />
               <Route
                 path='reports'
-                element={<div>Trip Reports (Coming Soon)</div>}
+                element={<TripReports currentUser={currentUser} />}
               />
             </Route>
 
@@ -204,15 +211,15 @@ const App = () => {
               />
               <Route
                 path='payments'
-                element={<div>Payment Management (Coming Soon)</div>}
+                element={<PaymentManagement currentUser={currentUser} />}
               />
               <Route
                 path='invoices'
-                element={<div>Invoice Management (Coming Soon)</div>}
+                element={<InvoiceManagement currentUser={currentUser} />}
               />
               <Route
                 path='reports'
-                element={<div>Financial Reports (Coming Soon)</div>}
+                element={<FinancialReports currentUser={currentUser} />}
               />
             </Route>
 
@@ -235,11 +242,11 @@ const App = () => {
               />
               <Route
                 path='tickets'
-                element={<div>Support Tickets (Coming Soon)</div>}
+                element={<SupportTickets currentUser={currentUser} />}
               />
               <Route
                 path='faq'
-                element={<div>FAQ Management (Coming Soon)</div>}
+                element={<FAQManagement currentUser={currentUser} />}
               />
             </Route>
 
