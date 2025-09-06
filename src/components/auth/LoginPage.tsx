@@ -43,14 +43,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       
       // Navigate to role-appropriate dashboard
       const dashboardRoutes = {
-        super_admin: '/admin/dashboard',
-        admin: '/admin/dashboard',
-        admin_helper: '/admin/dashboard',
-        booking_manager: '/booking/dashboard',
-        operations_coordinator: '/operations/dashboard',
-        driver: '/driver/dashboard',
-        finance_officer: '/finance/dashboard',
-        customer_service: '/support/dashboard'
+        super_admin: "/admin/dashboard",
+        admin: "/admin/dashboard",
+        booking_manager: "/booking/dashboard",
+        operations_coordinator: "/operations/dashboard",
+        driver: "/driver/dashboard",
+        finance_officer: "/finance/dashboard",
+        customer_service: "/support/dashboard",
       };
       
       navigate(dashboardRoutes[user.role] || '/dashboard');
@@ -64,14 +63,33 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   const roleOptions = [
-    { value: 'super_admin', label: 'Super Admin', description: 'Full system access' },
-    { value: 'admin', label: 'Admin', description: 'Business operations' },
-    { value: 'admin_helper', label: 'Admin Helper', description: 'Assistant to admin' },
-    { value: 'booking_manager', label: 'Booking Manager', description: 'Booking operations' },
-    { value: 'operations_coordinator', label: 'Operations Coordinator', description: 'Trip logistics' },
-    { value: 'driver', label: 'Driver/Guide', description: 'Field operations' },
-    { value: 'finance_officer', label: 'Finance Officer', description: 'Financial management' },
-    { value: 'customer_service', label: 'Customer Service', description: 'Customer support' }
+    {
+      value: "super_admin",
+      label: "Super Admin",
+      description: "Full system access",
+    },
+    { value: "admin", label: "Admin", description: "Business operations" },
+    {
+      value: "booking_manager",
+      label: "Booking Manager",
+      description: "Booking operations",
+    },
+    {
+      value: "operations_coordinator",
+      label: "Operations Coordinator",
+      description: "Trip logistics",
+    },
+    { value: "driver", label: "Driver/Guide", description: "Field operations" },
+    {
+      value: "finance_officer",
+      label: "Finance Officer",
+      description: "Financial management",
+    },
+    {
+      value: "customer_service",
+      label: "Customer Service",
+      description: "Customer support",
+    },
   ];
 
   return (
