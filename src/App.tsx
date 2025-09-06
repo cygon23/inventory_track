@@ -26,6 +26,11 @@ import InvoiceManagement from "./components/finance/InvoiceManagement";
 import FinancialReports from "./components/finance/FinancialReports";
 import SupportTickets from "./components/support/SupportTickets";
 import FAQManagement from "./components/support/FAQManagement";
+import StaffManagement from "./components/admin/StaffManagement";
+import Reports from "./components/admin/Reports";
+import SystemSettings from "./components/admin/SystemSettings";
+import UserManagement from "./components/admin/UserManagement";
+import ForensicMonitoring from "./components/admin/ForensicMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -102,19 +107,23 @@ const App = () => {
               />
               <Route
                 path='staff'
-                element={<div>Staff Management (Coming Soon)</div>}
+                element={<StaffManagement currentUser={currentUser} />}
               />
               <Route
                 path='reports'
-                element={<div>Reports (Coming Soon)</div>}
+                element={<Reports currentUser={currentUser} />}
               />
               <Route
                 path='settings'
-                element={<div>System Settings (Coming Soon)</div>}
+                element={<SystemSettings currentUser={currentUser} />}
               />
               <Route
                 path='users'
-                element={<div>User Management (Coming Soon)</div>}
+                element={<UserManagement currentUser={currentUser} />}
+              />
+              <Route
+                path='forensics'
+                element={<ForensicMonitoring currentUser={currentUser} />}
               />
             </Route>
 
@@ -262,7 +271,6 @@ function getRolePrefix(role: string): string {
   const prefixMap: { [key: string]: string } = {
     super_admin: "admin",
     admin: "admin",
-    admin_helper: "admin",
     booking_manager: "booking",
     operations_coordinator: "operations",
     driver: "driver",
