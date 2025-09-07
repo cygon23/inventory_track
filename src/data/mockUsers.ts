@@ -96,14 +96,13 @@ export const mockUsers: User[] = [
 ];
 
 export const rolePermissions = {
-  super_admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'settings', 'users', 'system'],
-  admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports'],
-  admin_helper: ['dashboard', 'messages', 'customers', 'bookings', 'reports'],
-  booking_manager: ['dashboard', 'messages', 'customers', 'bookings'],
-  operations_coordinator: ['dashboard', 'messages', 'trips', 'drivers', 'vehicles'],
-  driver: ['dashboard', 'my_trips', 'reports'],
-  finance_officer: ['dashboard', 'payments', 'invoices', 'reports', 'messages'],
-  customer_service: ['dashboard', 'messages', 'support', 'faq']
+  super_admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'settings', 'users', 'forensic', 'attendance'],
+  admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'forensic', 'attendance'],
+  booking_manager: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
+  operations_coordinator: ['dashboard', 'messages', 'trips', 'drivers', 'vehicles', 'attendance'],
+  driver: ['dashboard', 'my_trips', 'reports', 'attendance'],
+  finance_officer: ['dashboard', 'payments', 'invoices', 'reports', 'messages', 'attendance'],
+  customer_service: ['dashboard', 'messages', 'support', 'faq', 'attendance']
 };
 
 export const roleColors = {
