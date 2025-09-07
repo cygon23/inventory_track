@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AddCustomerModal from '@/components/forms/AddCustomerModal';
 import { 
   Search, 
   Filter, 
@@ -42,6 +43,7 @@ interface CustomerManagementProps {
 const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const customers = [
     {
@@ -205,9 +207,13 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Customer Management</h1>
           <p className="text-muted-foreground">Manage customer relationships and booking history</p>
         </div>
-        <Button>
+        <Button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="h-12 px-6 min-w-0 whitespace-nowrap"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Add Customer
+          <span className="hidden xs:inline">Add Customer</span>
+          <span className="xs:hidden">Add</span>
         </Button>
       </div>
 
@@ -235,21 +241,22 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
       {/* Filters and Search */}
       <Card className="safari-card">
         <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col space-y-4">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search customers by name, email, or country..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12"
               />
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <Button 
                 variant={filterStatus === 'all' ? 'default' : 'outline'} 
                 onClick={() => setFilterStatus('all')}
                 size="sm"
+                className="h-10 px-4"
               >
                 All
               </Button>
@@ -257,6 +264,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
                 variant={filterStatus === 'active' ? 'default' : 'outline'} 
                 onClick={() => setFilterStatus('active')}
                 size="sm"
+                className="h-10 px-4"
               >
                 Active
               </Button>
@@ -264,6 +272,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
                 variant={filterStatus === 'vip' ? 'default' : 'outline'} 
                 onClick={() => setFilterStatus('vip')}
                 size="sm"
+                className="h-10 px-4"
               >
                 VIP
               </Button>
@@ -271,6 +280,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
                 variant={filterStatus === 'new' ? 'default' : 'outline'} 
                 onClick={() => setFilterStatus('new')}
                 size="sm"
+                className="h-10 px-4"
               >
                 New
               </Button>
@@ -366,11 +376,11 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuContent align="end" className="bg-popover z-50">
                           <DropdownMenuItem>
                             <Eye className="mr-2 h-4 w-4" />
                             View Profile
@@ -397,6 +407,12 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ currentUser }) 
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal 
+        open={isAddModalOpen} 
+        onOpenChange={setIsAddModalOpen} 
+      />
     </div>
   );
 };

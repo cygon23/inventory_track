@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AddBookingModal from '@/components/forms/AddBookingModal';
 import { 
   Table, 
   TableBody, 
@@ -49,6 +50,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const filteredBookings = mockBookings.filter(booking => {
     const matchesSearch = searchQuery === '' || 
@@ -92,14 +94,18 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Booking Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Booking Management</h1>
           <p className="text-muted-foreground">Manage safari bookings and customer reservations</p>
         </div>
-        <Button>
+        <Button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="h-12 px-6 min-w-0 whitespace-nowrap"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          New Booking
+          <span className="hidden xs:inline">New Booking</span>
+          <span className="xs:hidden">New</span>
         </Button>
       </div>
 
@@ -165,22 +171,22 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
               <CardTitle>All Bookings</CardTitle>
               <CardDescription>Manage and track all safari bookings</CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <div className="relative w-full sm:flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search bookings..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-80"
+                  className="pl-10 h-12"
                 />
               </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-48 h-12">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover">
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="inquiry">Inquiry</SelectItem>
                   <SelectItem value="quoted">Quoted</SelectItem>
@@ -283,11 +289,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuContent align="end" className="bg-popover z-50">
                           <DropdownMenuItem onClick={() => setSelectedBooking(booking)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
@@ -321,7 +327,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-600">5</p>
               <p className="text-sm text-muted-foreground">Awaiting response</p>
-              <Button variant="outline" size="sm" className="mt-2">
+              <Button variant="outline" size="sm" className="mt-2 h-10 px-4">
                 Review Quotes
               </Button>
             </div>
@@ -336,7 +342,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
             <div className="text-center">
               <p className="text-2xl font-bold text-red-600">3</p>
               <p className="text-sm text-muted-foreground">Overdue payments</p>
-              <Button variant="outline" size="sm" className="mt-2">
+              <Button variant="outline" size="sm" className="mt-2 h-10 px-4">
                 Send Reminders
               </Button>
             </div>
@@ -351,13 +357,19 @@ const BookingManagement: React.FC<BookingManagementProps> = ({ currentUser }) =>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">8</p>
               <p className="text-sm text-muted-foreground">Next 7 days</p>
-              <Button variant="outline" size="sm" className="mt-2">
+              <Button variant="outline" size="sm" className="mt-2 h-10 px-4">
                 View Schedule
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Booking Modal */}
+      <AddBookingModal 
+        open={isAddModalOpen} 
+        onOpenChange={setIsAddModalOpen} 
+      />
     </div>
   );
 };
