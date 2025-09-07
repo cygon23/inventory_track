@@ -143,6 +143,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser, isOpen
       icon: Shield,
       path: `/admin/users`,
       permission: 'users'
+    },
+    {
+      id: 'forensic',
+      label: 'Forensic Monitoring',
+      icon: Shield,
+      path: `/admin/forensic`,
+      permission: 'forensic'
+    },
+    {
+      id: 'attendance',
+      label: 'Attendance',
+      icon: UserCheck,
+      path: `/${getRolePrefix(currentUser.role)}/attendance`,
+      permission: 'attendance'
     }
   ];
 
@@ -169,7 +183,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser, isOpen
 
   return (
     <aside className={cn(
-      "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-20",
+      "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-40",
       isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
     )}>
       <div className="p-4">
