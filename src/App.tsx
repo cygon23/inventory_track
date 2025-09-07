@@ -31,6 +31,7 @@ import Reports from "./components/admin/Reports";
 import SystemSettings from "./components/admin/SystemSettings";
 import UserManagement from "./components/admin/UserManagement";
 import ForensicMonitoring from "./components/admin/ForensicMonitoring";
+import AttendanceManagement from "./components/staff/AttendanceManagement";
 
 const queryClient = new QueryClient();
 
@@ -122,8 +123,12 @@ const App = () => {
                 element={<UserManagement currentUser={currentUser} />}
               />
               <Route
-                path='forensics'
+                path='forensic'
                 element={<ForensicMonitoring currentUser={currentUser} />}
+              />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
               />
             </Route>
 
@@ -151,6 +156,10 @@ const App = () => {
               <Route
                 path='bookings'
                 element={<BookingManagement currentUser={currentUser} />}
+              />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
               />
             </Route>
 
@@ -183,6 +192,10 @@ const App = () => {
                 path='vehicles'
                 element={<VehicleManagement currentUser={currentUser} />}
               />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
+              />
             </Route>
 
             {/* Driver Routes */}
@@ -202,6 +215,10 @@ const App = () => {
               <Route
                 path='reports'
                 element={<TripReports currentUser={currentUser} />}
+              />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
               />
             </Route>
 
@@ -230,6 +247,14 @@ const App = () => {
                 path='reports'
                 element={<FinancialReports currentUser={currentUser} />}
               />
+              <Route
+                path='messages'
+                element={<CentralizedMessages currentUser={currentUser} />}
+              />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
+              />
             </Route>
 
             {/* Customer Service Routes */}
@@ -256,6 +281,10 @@ const App = () => {
               <Route
                 path='faq'
                 element={<FAQManagement currentUser={currentUser} />}
+              />
+              <Route
+                path='attendance'
+                element={<AttendanceManagement currentUser={currentUser} />}
               />
             </Route>
 
