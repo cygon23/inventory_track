@@ -34,6 +34,7 @@ const StaffManagement: React.FC = () => {
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: '',
     assigned_region: '',
     permissions: [] as string[],
@@ -140,47 +141,21 @@ const StaffManagement: React.FC = () => {
           role: userData.role,
           assigned_region: userData.assigned_region ?? null,
           permissions: userData.permissions ?? [],
-          is_active: userData.is_active ?? true
+          is_active: userData.is_active ?? true,
+          password: (formData as any).password || undefined
         }
       });
 
-      if (!fnError && fnData && fnData.success) {
+      if (!fnError && fnData && (fnData as any).success) {
         toast.success('Staff member created successfully');
         await fetchStaff();
         return { success: true };
       }
-
-      // Fallback for environments without the Edge Function: use admin API
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: 'TempPassword123!',
-        email_confirm: true
-      });
-
-      if (authError || !authData?.user) {
-        const message = authError?.message || 'Failed to create auth user (service role required)';
-        console.error('Error creating auth user:', message);
-        toast.error('Failed to create user account');
-        return { success: false, error: message };
-      }
-
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert({
-          ...userData,
-          id: authData.user.id
-        });
-
-      if (dbError) {
-        console.error('Error creating user profile:', dbError);
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        toast.error('Failed to create user profile');
-        return { success: false, error: dbError.message };
-      }
-
-      toast.success('Staff member created successfully');
-      await fetchStaff();
-      return { success: true };
+      // If function call fails, surface error and do not attempt insecure client admin calls
+      const message = (fnError as any)?.message || 'Failed to create user via function';
+      console.error('Error creating user via function:', message);
+      toast.error('Failed to create staff member');
+      return { success: false, error: message };
     } catch (error) {
       console.error('Error creating staff member:', error);
       toast.error('Failed to create staff member');
@@ -305,6 +280,7 @@ const StaffManagement: React.FC = () => {
       name: '',
       email: '',
       phone: '',
+      password: '',
       role: '',
       assigned_region: '',
       permissions: [],
@@ -433,6 +409,17 @@ const StaffManagement: React.FC = () => {
                     required
                   />
                 </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="Enter initial password" 
+                  value={(formData as any).password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+              </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input 
