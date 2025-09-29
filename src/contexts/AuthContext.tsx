@@ -142,7 +142,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         console.log('AuthContext: Getting initial session...')
         const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) return console.error('Error getting session:', error)
+        if (error) {
+          console.error('AuthContext: Error getting session:', error)
+        }
+        console.log('AuthContext: getSession result =>', { hasSession: !!session, userId: session?.user?.id })
 
         if (session?.user && mounted) {
           setSupabaseUser(session.user)
@@ -160,14 +163,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error initializing auth:', err)
         setUser(null)
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) {
+          console.log('AuthContext: Initializing complete, setting loading=false')
+          setLoading(false)
+        }
       }
     }
 
     getInitialSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
+      async (event, session) => {
+        console.log('AuthContext: onAuthStateChange', { event, hasSession: !!session })
         if (!mounted) return
 
         setSupabaseUser(session?.user ?? null)
