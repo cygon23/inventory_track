@@ -131,25 +131,39 @@ const StaffManagement: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      // Create user in Supabase Auth
+      // Preferred: call secured Edge Function (requires deployment)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-user', {
+        body: {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone ?? null,
+          role: userData.role,
+          assigned_region: userData.assigned_region ?? null,
+          permissions: userData.permissions ?? [],
+          is_active: userData.is_active ?? true
+        }
+      });
+
+      if (!fnError && fnData && fnData.success) {
+        toast.success('Staff member created successfully');
+        await fetchStaff();
+        return { success: true };
+      }
+
+      // Fallback for environments without the Edge Function: use admin API
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: userData.email,
-        password: 'TempPassword123!', // Temporary password
+        password: 'TempPassword123!',
         email_confirm: true
       });
 
-      if (authError) {
-        console.error('Error creating auth user:', authError);
+      if (authError || !authData?.user) {
+        const message = authError?.message || 'Failed to create auth user (service role required)';
+        console.error('Error creating auth user:', message);
         toast.error('Failed to create user account');
-        return { success: false, error: authError.message };
+        return { success: false, error: message };
       }
 
-      if (!authData.user) {
-        toast.error('Failed to create user account');
-        return { success: false, error: 'No user data returned' };
-      }
-
-      // Create user profile in database
       const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -159,7 +173,6 @@ const StaffManagement: React.FC = () => {
 
       if (dbError) {
         console.error('Error creating user profile:', dbError);
-        // Clean up auth user if database insert fails
         await supabase.auth.admin.deleteUser(authData.user.id);
         toast.error('Failed to create user profile');
         return { success: false, error: dbError.message };
@@ -445,7 +458,9 @@ const StaffManagement: React.FC = () => {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(roleDefinitions).map(([key, role]) => (
+                      {Object.entries(roleDefinitions)
+                        .filter(([key]) => isSuperAdmin() || key !== 'super_admin')
+                        .map(([key, role]) => (
                         <SelectItem key={key} value={key}>
                           <div className="flex flex-col">
                             <span className="font-medium">{role.label}</span>
@@ -459,14 +474,14 @@ const StaffManagement: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="region">Assigned Region</Label>
                   <Select 
-                    value={formData.assigned_region} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value }))}
+                    value={formData.assigned_region || 'none'} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value === 'none' ? '' : value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select region" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific region</SelectItem>
+                      <SelectItem value="none">No specific region</SelectItem>
                       {regions.map(region => (
                         <SelectItem key={region} value={region}>{region}</SelectItem>
                       ))}
@@ -771,7 +786,9 @@ const StaffManagement: React.FC = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(roleDefinitions).map(([key, role]) => (
+                    {Object.entries(roleDefinitions)
+                      .filter(([key]) => isSuperAdmin() || key !== 'super_admin')
+                      .map(([key, role]) => (
                       <SelectItem key={key} value={key}>
                         <div className="flex flex-col">
                           <span className="font-medium">{role.label}</span>
@@ -785,14 +802,14 @@ const StaffManagement: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="edit-region">Assigned Region</Label>
                 <Select 
-                  value={formData.assigned_region} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value }))}
+                  value={formData.assigned_region || 'none'} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value === 'none' ? '' : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select region" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific region</SelectItem>
+                    <SelectItem value="none">No specific region</SelectItem>
                     {regions.map(region => (
                       <SelectItem key={region} value={region}>{region}</SelectItem>
                     ))}
