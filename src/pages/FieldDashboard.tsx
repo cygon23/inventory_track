@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/Layout';
-import { mockClients } from '@/data/mockData';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 
 const FieldDashboard: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,8 +21,9 @@ const FieldDashboard: React.FC = () => {
     });
   }, []);
 
-  const todaysClients = mockClients.filter(client => 
-    client.journeyStatus === 'arrived' || client.journeyStatus === 'confirmed'
+  const { data: customers } = useSupabaseQuery<any>('customers', '*');
+  const todaysClients = customers.filter((client: any) => 
+    client.journey_status === 'arrived' || client.journey_status === 'confirmed'
   );
 
   const currentTime = new Date().toLocaleTimeString('en-US', { 
@@ -158,19 +159,15 @@ const FieldDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {todaysClients.map((client) => (
+              {todaysClients.map((client: any) => (
                 <div key={client.id} className="p-4 border border-border rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="font-semibold text-foreground">{client.name}</h4>
-                      <p className="text-sm text-muted-foreground">{client.safariPackage}</p>
+                      <p className="text-sm text-muted-foreground">{client.safari_package ?? ''}</p>
                     </div>
-                    <Badge className={
-                      client.journeyStatus === 'arrived' 
-                        ? 'bg-accent-gold text-foreground' 
-                        : 'bg-primary text-primary-foreground'
-                    }>
-                      {client.journeyStatus}
+                    <Badge className={client.journey_status === 'arrived' ? 'bg-accent-gold text-foreground' : 'bg-primary text-primary-foreground'}>
+                      {client.journey_status}
                     </Badge>
                   </div>
                   

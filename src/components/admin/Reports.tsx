@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Download, Calendar as CalendarIcon, TrendingUp, Users, DollarSign, MapPin, Star } from 'lucide-react';
 import { format } from 'date-fns';
-import { User } from '@/data/mockUsers';
+import { User } from '@/lib/supabase';
 
 interface ReportsProps {
   currentUser: User;

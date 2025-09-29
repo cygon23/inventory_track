@@ -12,7 +12,7 @@ import {
 import { Bell, MessageSquare, Settings, LogOut, MapPin, Search, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { roleColors } from '@/data/mockUsers';
+import { roleColors } from '@/lib/constants';
 
 interface DashboardHeaderProps {
   onLogout: () => void;
@@ -22,6 +22,11 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onLogout, onMenuClick, isMobile }) => {
   const { user: currentUser } = useAuth();
+  if (!currentUser) {
+    return (
+      <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 md:px-6 shadow-warm relative z-30" />
+    );
+  }
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -87,16 +92,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onLogout, onMenuClick
             <Button variant="ghost" className="flex items-center space-x-2 md:space-x-3 p-2">
               <div className="flex items-center space-x-2 md:space-x-3">
                 <div className="text-right hidden md:block">
-                  <div className="text-sm font-medium">{currentUser.name}</div>
+                  <div className="text-sm font-medium">{currentUser?.name || ''}</div>
                   <div className="flex items-center space-x-2">
-                    <Badge className={`text-xs ${roleColors[currentUser.role]}`}>
-                      {formatRole(currentUser.role)}
+                    <Badge className={`text-xs ${currentUser ? roleColors[currentUser.role] : ''}`}>
+                      {currentUser ? formatRole(currentUser.role) : ''}
                     </Badge>
                   </div>
                 </div>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar} />
-                  <AvatarFallback>{getInitials(currentUser.name)}</AvatarFallback>
+                  <AvatarImage src={currentUser?.avatar || ''} />
+                  <AvatarFallback>{currentUser ? getInitials(currentUser.name) : ''}</AvatarFallback>
                 </Avatar>
               </div>
             </Button>

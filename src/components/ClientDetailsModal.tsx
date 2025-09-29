@@ -8,7 +8,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { JourneyTracker } from './JourneyTracker';
-import { Client } from '@/data/mockData';
+type Client = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  journeyStatus?: 'submitted' | 'confirmed' | 'arrived' | 'completed';
+  journey_status?: 'submitted' | 'confirmed' | 'arrived' | 'completed';
+  safariPackage?: string;
+  safariDates?: { start: string; end: string };
+  safari_package?: string | null;
+  totalCost?: number;
+  total_cost?: number;
+  paidAmount?: number;
+  paid_amount?: number;
+  emergencyContact?: { name: string; phone: string; relationship: string };
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
+  specialRequirements: string[];
+  communications: { id: string; timestamp: string; type: string; sender: string; content: string; status: 'sent' | 'delivered' | 'read' }[];
+}
 
 interface ClientDetailsModalProps {
   client: Client | null;
@@ -37,11 +57,14 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
   if (!client) return null;
 
   const getPaymentProgress = () => {
-    return (client.paidAmount / client.totalCost) * 100;
+    const paid = client.paidAmount ?? client.paid_amount ?? 0
+    const total = client.totalCost ?? client.total_cost ?? 0
+    if (!total) return 0
+    return (paid / total) * 100;
   };
 
   const getDaysUntilSafari = () => {
-    const safariDate = new Date(client.safariDates.start);
+    const safariDate = new Date((client.safariDates?.start ?? '') as string);
     const today = new Date();
     const diffTime = safariDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -102,13 +125,15 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                     <div>
                       <p className="text-sm font-medium">{client.safariPackage}</p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {new Date(client.safariDates.start).toLocaleDateString()} - 
-                        {new Date(client.safariDates.end).toLocaleDateString()}
-                      </span>
-                    </div>
+                {client.safariDates && (
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {new Date(client.safariDates.start).toLocaleDateString()} - 
+                      {new Date(client.safariDates.end).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
                     <div className="text-sm">
                       <span className="text-muted-foreground">Days until safari: </span>
                       <span className="font-semibold">
@@ -165,7 +190,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                   <CardTitle>Safari Journey Progress</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <JourneyTracker currentStatus={client.journeyStatus} />
+                  <JourneyTracker currentStatus={(client.journeyStatus ?? client.journey_status) as any} />
                 </CardContent>
               </Card>
               
@@ -195,16 +220,16 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-3 bg-secondary rounded-lg">
                       <p className="text-sm text-muted-foreground">Total Cost</p>
-                      <p className="text-xl font-bold">${client.totalCost.toLocaleString()}</p>
+                      <p className="text-xl font-bold">${((client.totalCost ?? client.total_cost) || 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-secondary rounded-lg">
                       <p className="text-sm text-muted-foreground">Paid Amount</p>
-                      <p className="text-xl font-bold text-success">${client.paidAmount.toLocaleString()}</p>
+                      <p className="text-xl font-bold text-success">${((client.paidAmount ?? client.paid_amount) || 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-secondary rounded-lg">
                       <p className="text-sm text-muted-foreground">Outstanding</p>
                       <p className="text-xl font-bold text-destructive">
-                        ${(client.totalCost - client.paidAmount).toLocaleString()}
+                        {(((client.totalCost ?? client.total_cost) || 0) - ((client.paidAmount ?? client.paid_amount) || 0)).toLocaleString()}
                       </p>
                     </div>
                   </div>

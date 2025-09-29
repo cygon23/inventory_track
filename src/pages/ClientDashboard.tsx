@@ -8,14 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Layout } from '@/components/Layout';
 import { JourneyTracker } from '@/components/JourneyTracker';
-import { mockClients } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 
 const ClientDashboard: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   
-  // Using first client as current user
-  const currentClient = mockClients[0];
+  const { user } = useAuth();
+  const { data: customers, loading } = useSupabaseQuery<any>('customers', '*', (q: any) => q.eq('email', user?.email ?? ''), { single: false });
+  const currentClient = customers[0];
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -44,6 +46,7 @@ const ClientDashboard: React.FC = () => {
   }, []);
 
   const getDaysUntilSafari = () => {
+    if (!currentClient) return 0;
     const safariDate = new Date(currentClient.safariDates.start);
     const today = new Date();
     const diffTime = safariDate.getTime() - today.getTime();
@@ -52,7 +55,8 @@ const ClientDashboard: React.FC = () => {
   };
 
   const getPaymentProgress = () => {
-    return (currentClient.paidAmount / currentClient.totalCost) * 100;
+    if (!currentClient) return 0;
+    return (currentClient.paid_amount / currentClient.total_cost) * 100;
   };
 
   const daysUntil = getDaysUntilSafari();
@@ -68,6 +72,22 @@ const ClientDashboard: React.FC = () => {
 
   const completedTasks = preparationTasks.filter(task => task.completed).length;
   const preparationProgress = (completedTasks / preparationTasks.length) * 100;
+
+  if (loading) {
+    return (
+      <Layout userType="client">
+        <div className="p-6 text-muted-foreground">Loading...</div>
+      </Layout>
+    );
+  }
+
+  if (!currentClient) {
+    return (
+      <Layout userType="client">
+        <div className="p-6 text-muted-foreground">No customer record found.</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout userType="client">
@@ -171,17 +191,17 @@ const ClientDashboard: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Paid</span>
-                  <span className="font-semibold">${currentClient.paidAmount.toLocaleString()}</span>
+                  <span className="font-semibold">${currentClient.paid_amount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
-                  <span className="font-semibold">${currentClient.totalCost.toLocaleString()}</span>
+                  <span className="font-semibold">${currentClient.total_cost.toLocaleString()}</span>
                 </div>
                 {paymentProgress < 100 && (
                   <div className="flex justify-between text-warning">
                     <span>Remaining</span>
                     <span className="font-semibold">
-                      ${(currentClient.totalCost - currentClient.paidAmount).toLocaleString()}
+                      ${(currentClient.total_cost - currentClient.paid_amount).toLocaleString()}
                     </span>
                   </div>
                 )}
