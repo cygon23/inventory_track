@@ -12,6 +12,7 @@ import {
 import { Bell, MessageSquare, Settings, LogOut, MapPin, Search, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { roleColors } from '@/data/mockUsers';
 
 interface DashboardHeaderProps {
   onLogout: () => void;
