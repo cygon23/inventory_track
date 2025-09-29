@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Layout } from '@/components/Layout';
 import { SafariCard } from '@/components/SafariCard';
-import { mockClients, analyticsData } from '@/data/mockData';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
@@ -40,13 +40,14 @@ const StaffDashboard: React.FC = () => {
     });
   }, []);
 
-  const urgentActions = mockClients.filter(client => 
-    client.journeyStatus === 'submitted' || 
-    (client.paidAmount < client.totalCost && new Date(client.safariDates.start) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+  const { data: customers } = useSupabaseQuery<any>('customers', '*');
+  const urgentActions = customers.filter((client: any) => 
+    client.journey_status === 'submitted' || 
+    (client.paid_amount < client.total_cost && new Date(client.booking_date ?? client.safariDates?.start) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
   );
 
-  const recentBookings = mockClients
-    .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime())
+  const recentBookings = [...customers]
+    .sort((a: any, b: any) => new Date(b.booking_date ?? 0).getTime() - new Date(a.booking_date ?? 0).getTime())
     .slice(0, 3);
 
   const chartConfig = {
@@ -85,7 +86,7 @@ const StaffDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Bookings</p>
-                  <p className="text-3xl font-bold text-foreground">{analyticsData.totalBookings}</p>
+                  <p className="text-3xl font-bold text-foreground">{customers.length}</p>
                   <p className="text-xs text-success">+12% from last month</p>
                 </div>
                 <Users className="w-8 h-8 text-primary" />
@@ -98,7 +99,7 @@ const StaffDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Active Clients</p>
-                  <p className="text-3xl font-bold text-foreground">{analyticsData.activeClients}</p>
+                  <p className="text-3xl font-bold text-foreground">{customers.filter((c: any) => c.journey_status !== 'completed').length}</p>
                   <p className="text-xs text-success">+5 new this week</p>
                 </div>
                 <Calendar className="w-8 h-8 text-primary" />
@@ -111,9 +112,7 @@ const StaffDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Revenue</p>
-                  <p className="text-3xl font-bold text-foreground">
-                    ${(analyticsData.revenue / 1000).toFixed(0)}k
-                  </p>
+                  <p className="text-3xl font-bold text-foreground">—</p>
                   <p className="text-xs text-success">+18% from last month</p>
                 </div>
                 <DollarSign className="w-8 h-8 text-primary" />
@@ -126,7 +125,7 @@ const StaffDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Satisfaction</p>
-                  <p className="text-3xl font-bold text-foreground">{analyticsData.satisfactionScore}</p>
+                  <p className="text-3xl font-bold text-foreground">—</p>
                   <p className="text-xs text-success">Excellent rating</p>
                 </div>
                 <Star className="w-8 h-8 text-primary" />
@@ -148,7 +147,7 @@ const StaffDashboard: React.FC = () => {
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analyticsData.monthlyBookings}>
+                  <BarChart data={[] as any}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -169,37 +168,12 @@ const StaffDashboard: React.FC = () => {
               <ChartContainer config={chartConfig} className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={analyticsData.statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      dataKey="count"
-                      nameKey="status"
-                    >
-                      {analyticsData.statusDistribution.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={statusColors[entry.status as keyof typeof statusColors]} 
-                        />
-                      ))}
-                    </Pie>
+                    <Pie data={[]} cx="50%" cy="50%" outerRadius={100} dataKey="count" nameKey="status" />
                     <ChartTooltip content={<ChartTooltipContent />} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                {analyticsData.statusDistribution.map((item) => (
-                  <div key={item.status} className="flex items-center space-x-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: statusColors[item.status as keyof typeof statusColors] }}
-                    />
-                    <span className="text-sm text-foreground">{item.status}</span>
-                    <span className="text-sm text-muted-foreground">({item.count})</span>
-                  </div>
-                ))}
-              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4" />
             </CardContent>
           </Card>
         </div>

@@ -18,6 +18,7 @@ import {
   Route
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { rolePermissions as rolePermissionsConst } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 
 interface DashboardSidebarProps {
@@ -30,17 +31,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
   const { user: currentUser } = useAuth();
   const location = useLocation();
 
-  // Role permissions mapping
-  const rolePermissions = {
-    super_admin: ['all'],
-    admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'forensic', 'attendance'],
-    admin_helper: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
-    booking_manager: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
-    operations_coordinator: ['dashboard', 'messages', 'trips', 'drivers', 'vehicles', 'attendance'],
-    driver: ['dashboard', 'my_trips', 'reports', 'attendance'],
-    finance_officer: ['dashboard', 'payments', 'invoices', 'reports', 'messages', 'attendance'],
-    customer_service: ['dashboard', 'messages', 'support', 'faq', 'attendance']
-  };
+  // Fallback if user not ready
+  if (!currentUser) {
+    return (
+      <aside className={cn(
+        "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-40",
+        isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
+      )}>
+        <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+      </aside>
+    );
+  }
 
   const allMenuItems = [
     {
@@ -56,7 +57,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
       icon: MessageSquare,
       path: `/${getRolePrefix(currentUser.role)}/messages`,
       permission: 'messages',
-      badge: 12
+      badge: undefined
     },
     {
       id: 'customers',
@@ -186,10 +187,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
     return prefixMap[role] || 'admin';
   }
 
-  const userPermissions = rolePermissions[currentUser.role] || [];
-  const visibleMenuItems = allMenuItems.filter(item => 
-    userPermissions.includes(item.permission)
-  );
+  const userPermissions = rolePermissionsConst[currentUser.role] || [];
+  const visibleMenuItems = allMenuItems.filter(item => {
+    if (currentUser.role === 'super_admin') return true;
+    return userPermissions.includes(item.permission);
+  });
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -200,6 +202,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
     )}>
       <div className="p-4">
         <nav className="space-y-2">
+          {visibleMenuItems.length === 0 && (
+            <div className="text-sm text-muted-foreground px-3 py-2">No menu items for role.</div>
+          )}
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             return (

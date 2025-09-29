@@ -3,7 +3,22 @@ import { Calendar, Users, MapPin, Clock } from 'lucide-react';
 import { gsap } from 'gsap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Client } from '@/data/mockData';
+type Client = {
+  id: string;
+  name: string;
+  email: string;
+  journeyStatus?: 'submitted' | 'confirmed' | 'arrived' | 'completed';
+  journey_status?: 'submitted' | 'confirmed' | 'arrived' | 'completed';
+  safariPackage?: string;
+  safariDates?: { start: string; end: string };
+  safari_package?: string | null;
+  booking_date?: string | null;
+  totalCost?: number;
+  total_cost?: number;
+  paidAmount?: number;
+  paid_amount?: number;
+  specialRequirements: string[];
+}
 import { JourneyTracker } from './JourneyTracker';
 
 interface SafariCardProps {
@@ -74,7 +89,7 @@ export const SafariCard: React.FC<SafariCardProps> = ({
   };
 
   const getDaysUntilSafari = () => {
-    const safariDate = new Date(client.safariDates.start);
+    const safariDate = new Date((client.safariDates?.start ?? client.booking_date) as string);
     const today = new Date();
     const diffTime = safariDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -114,7 +129,7 @@ export const SafariCard: React.FC<SafariCardProps> = ({
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <div className="flex items-center space-x-1">
               <Calendar className="w-4 h-4" />
-              <span>{formatDate(client.safariDates.start)}</span>
+              <span>{formatDate((client.safariDates?.start ?? client.booking_date) as string)}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4" />
@@ -128,7 +143,7 @@ export const SafariCard: React.FC<SafariCardProps> = ({
         {/* Journey Progress */}
         <div>
           <h5 className="text-sm font-medium text-foreground mb-3">Journey Progress</h5>
-          <JourneyTracker currentStatus={client.journeyStatus} />
+          <JourneyTracker currentStatus={(client.journeyStatus ?? client.journey_status) as any} />
         </div>
 
         {/* Quick Stats */}
@@ -137,24 +152,24 @@ export const SafariCard: React.FC<SafariCardProps> = ({
             <div>
               <span className="text-muted-foreground">Total Cost</span>
               <div className="font-semibold text-foreground">
-                ${client.totalCost.toLocaleString()}
+                ${((client.totalCost ?? client.total_cost) || 0).toLocaleString()}
               </div>
             </div>
             <div>
               <span className="text-muted-foreground">Payment Status</span>
               <div className={`font-semibold ${
-                client.paidAmount >= client.totalCost 
+                (client.paidAmount ?? client.paid_amount ?? 0) >= (client.totalCost ?? client.total_cost ?? 0)
                   ? 'text-success' 
                   : 'text-warning'
               }`}>
-                {client.paidAmount >= client.totalCost ? 'Paid' : 'Pending'}
+                {(client.paidAmount ?? client.paid_amount ?? 0) >= (client.totalCost ?? client.total_cost ?? 0) ? 'Paid' : 'Pending'}
               </div>
             </div>
           </div>
         </div>
 
         {/* Special Requirements */}
-        {client.specialRequirements.length > 0 && (
+        {client.specialRequirements && client.specialRequirements.length > 0 && (
           <div className="pt-2">
             <div className="flex flex-wrap gap-1">
               {client.specialRequirements.slice(0, 2).map((req, index) => (

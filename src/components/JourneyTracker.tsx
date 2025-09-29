@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Check, Clock, Plane, Camera } from 'lucide-react';
 import { gsap } from 'gsap';
-import { journeyStages } from '@/data/mockData';
+import { journeyStages } from '@/lib/constants';
 
 interface JourneyTrackerProps {
   currentStatus: 'submitted' | 'confirmed' | 'arrived' | 'completed';

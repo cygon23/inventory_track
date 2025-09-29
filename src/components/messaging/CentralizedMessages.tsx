@@ -25,18 +25,48 @@ import {
   Archive,
   Forward
 } from 'lucide-react';
-import { mockMessages, channelColors, priorityColors, Message } from '@/data/mockMessages';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
+type Message = {
+  id: string;
+  customerId?: string;
+  customerName: string;
+  customerAvatar?: string;
+  channel: 'whatsapp' | 'email' | 'live_chat' | 'sms' | 'internal';
+  type: string;
+  subject: string;
+  content: string;
+  timestamp: string;
+  status: 'unread' | 'read' | 'replied' | 'resolved';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assignedTo?: string;
+  assignedToName?: string;
+  tags: string[];
+}
+const channelColors: Record<string, string> = {
+  whatsapp: 'bg-green-500',
+  email: 'bg-blue-500',
+  live_chat: 'bg-purple-500',
+  sms: 'bg-orange-500',
+  internal: 'bg-gray-500'
+}
+const priorityColors: Record<string, string> = {
+  low: 'bg-green-100 text-green-800',
+  medium: 'bg-yellow-100 text-yellow-800',
+  high: 'bg-orange-100 text-orange-800',
+  urgent: 'bg-red-100 text-red-800'
+}
 import { useAuth } from '@/contexts/AuthContext';
 
 const CentralizedMessages: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const { data: messages } = useSupabaseQuery<Message>('messages', '*');
   const [filterChannel, setFilterChannel] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [replyText, setReplyText] = useState('');
 
-  const filteredMessages = mockMessages.filter(message => {
+  const filteredMessages = messages.filter(message => {
     const matchesChannel = filterChannel === 'all' || message.channel === filterChannel;
     const matchesStatus = filterStatus === 'all' || message.status === filterStatus;
     const matchesSearch = searchQuery === '' || 
