@@ -25,6 +25,7 @@ type Role =
 interface CreateUserPayload {
   name: string;
   email: string;
+  password?: string;
   phone: string | null;
   role: Role;
   assigned_region: string | null;
@@ -60,6 +61,7 @@ serve(async (req: Request) => {
     const payload = (await req.json()) as Partial<CreateUserPayload>;
     const name = (payload.name || "").toString().trim();
     const email = (payload.email || "").toString().trim().toLowerCase();
+    const providedPassword = (payload.password || "").toString();
     const phone = payload.phone ?? null;
     const role = payload.role as Role | undefined;
     const assigned_region = payload.assigned_region ?? null;
@@ -84,8 +86,8 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Invalid role" }), { status: 400, headers: corsHeaders });
     }
 
-    // Create auth user with a temporary password and mark email as confirmed
-    const tempPassword = generateTempPassword();
+    // Create auth user with provided password or a generated temporary one and mark email as confirmed
+    const tempPassword = providedPassword && providedPassword.length >= 8 ? providedPassword : generateTempPassword();
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password: tempPassword,
@@ -118,7 +120,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, user_id: authData.user.id, temp_password: tempPassword }),
+      JSON.stringify({ success: true, user_id: authData.user.id }),
       { status: 200, headers: corsHeaders }
     );
   } catch (err) {
