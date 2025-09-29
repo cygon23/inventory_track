@@ -1,47 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { mockUsers, User } from '@/data/mockUsers';
-import { MapPin, Users, Shield } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { MapPin, Users, Shield, Loader2, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface LoginPageProps {
-  onLogin: (user: User) => void;
-}
-
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [selectedRole, setSelectedRole] = useState('');
+const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn, user, loading } = useAuth();
 
-  const handleRoleSelect = (roleValue: string) => {
-    setSelectedRole(roleValue);
-    const user = mockUsers.find(u => u.role === roleValue);
-    if (user) {
-      setEmail(user.email);
-    }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const user = mockUsers.find(u => u.email === email);
-    if (user) {
-      onLogin(user);
-      toast({
-        title: "Login Successful",
-        description: `Welcome back, ${user.name}!`,
-      });
-      
-      // Navigate to role-appropriate dashboard
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user && !loading) {
       const dashboardRoutes = {
         super_admin: "/admin/dashboard",
         admin: "/admin/dashboard",
@@ -53,44 +32,47 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       };
       
       navigate(dashboardRoutes[user.role] || '/dashboard');
-    } else {
-      toast({
-        title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
-        variant: "destructive"
-      });
+    }
+  }, [user, loading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const result = await signIn(email, password);
+      
+      if (result.success) {
+        toast.success('Login successful! Redirecting...');
+        // Navigation will be handled by useEffect when user state updates
+      } else {
+        toast.error(result.error || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const roleOptions = [
-    {
-      value: "super_admin",
-      label: "Super Admin",
-      description: "Full system access",
-    },
-    { value: "admin", label: "Admin", description: "Business operations" },
-    {
-      value: "booking_manager",
-      label: "Booking Manager",
-      description: "Booking operations",
-    },
-    {
-      value: "operations_coordinator",
-      label: "Operations Coordinator",
-      description: "Trip logistics",
-    },
-    { value: "driver", label: "Driver/Guide", description: "Field operations" },
-    {
-      value: "finance_officer",
-      label: "Finance Officer",
-      description: "Financial management",
-    },
-    {
-      value: "customer_service",
-      label: "Customer Service",
-      description: "Customer support",
-    },
-  ];
+  // Show loading spinner while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4">
@@ -139,53 +121,54 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
             <CardDescription>
-              Select your role to access the appropriate dashboard
+              Enter your credentials to access the system
             </CardDescription>
           </CardHeader>
           
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="role">Select Role (Demo)</Label>
-                <Select value={selectedRole} onValueChange={handleRoleSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose your role" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
-                    {roleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{option.label}</span>
-                          <span className="text-sm text-muted-foreground">{option.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Enter your email address"
                   required
+                  disabled={isLoading}
+                  className="w-full"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    disabled={isLoading}
+                    className="w-full pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -193,22 +176,39 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   id="remember"
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  disabled={isLoading}
                 />
                 <Label htmlFor="remember" className="text-sm">Remember me</Label>
               </div>
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={!selectedRole}>
-                Sign In
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !email || !password}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
               
               <div className="text-center space-y-2">
-                <Button variant="ghost" size="sm">
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  size="sm"
+                  disabled={isLoading}
+                >
                   Forgot Password?
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Demo mode: Select any role to explore the system
+                  Contact your administrator for account access
                 </p>
               </div>
             </CardFooter>

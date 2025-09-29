@@ -1,94 +1,383 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Edit, Trash2, Users, UserCheck, Clock, AlertTriangle } from 'lucide-react';
-import { User } from '@/data/mockUsers';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Search, Plus, Edit, Trash2, Users, UserCheck, Clock, AlertTriangle, Loader2, Eye, EyeOff, Save, X } from 'lucide-react';
+import { useAuth, useRole } from '@/contexts/AuthContext';
+import { supabase, User, UserInsert, UserUpdate } from '@/lib/supabase';
+import { toast } from 'sonner';
 
-interface StaffManagementProps {
-  currentUser: User;
-}
-
-const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
+const StaffManagement: React.FC = () => {
+  const { user: currentUser, refreshUser } = useAuth();
+  const { isSuperAdmin, isAdmin } = useRole();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [staff, setStaff] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form states
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    assigned_region: '',
+    permissions: [] as string[],
+    is_active: true
+  });
 
-  const staff = [
-    {
-      id: '1',
-      name: 'John Smith',
-      email: 'john.smith@safari.com',
-      role: 'Operations Coordinator',
-      department: 'Operations',
-      status: 'active',
-      joinDate: '2023-01-15',
-      lastLogin: '2024-01-08 09:30',
-      avatar: '',
-      phone: '+254 701 234 567',
-      permissions: ['trip_management', 'driver_assignment', 'vehicle_management']
+  // Role definitions with permissions
+  const roleDefinitions = {
+    super_admin: {
+      label: 'Super Admin',
+      permissions: ['all'],
+      description: 'Full system access'
     },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@safari.com',
-      role: 'Booking Manager',
-      department: 'Sales',
-      status: 'active',
-      joinDate: '2022-11-20',
-      lastLogin: '2024-01-08 10:15',
-      avatar: '',
-      phone: '+254 701 234 568',
-      permissions: ['booking_management', 'customer_management', 'pricing']
+    admin: {
+      label: 'Admin',
+      permissions: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'forensic', 'attendance'],
+      description: 'Business operations management'
     },
-    {
-      id: '3',
-      name: 'Michael Brown',
-      email: 'michael.brown@safari.com',
-      role: 'Finance Officer',
-      department: 'Finance',
-      status: 'inactive',
-      joinDate: '2023-03-10',
-      lastLogin: '2024-01-05 16:45',
-      avatar: '',
-      phone: '+254 701 234 569',
-      permissions: ['payment_management', 'invoice_management', 'financial_reports']
+    admin_helper: {
+      label: 'Admin Helper',
+      permissions: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
+      description: 'Administrative support'
     },
-    {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david.wilson@safari.com',
-      role: 'Driver',
-      department: 'Operations',
-      status: 'active',
-      joinDate: '2023-06-05',
-      lastLogin: '2024-01-08 07:00',
-      avatar: '',
-      phone: '+254 701 234 570',
-      permissions: ['trip_reports', 'vehicle_status']
+    booking_manager: {
+      label: 'Booking Manager',
+      permissions: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
+      description: 'Booking operations management'
+    },
+    operations_coordinator: {
+      label: 'Operations Coordinator',
+      permissions: ['dashboard', 'messages', 'trips', 'drivers', 'vehicles', 'attendance'],
+      description: 'Trip logistics coordination'
+    },
+    driver: {
+      label: 'Driver/Guide',
+      permissions: ['dashboard', 'my_trips', 'reports', 'attendance'],
+      description: 'Field operations'
+    },
+    finance_officer: {
+      label: 'Finance Officer',
+      permissions: ['dashboard', 'payments', 'invoices', 'reports', 'messages', 'attendance'],
+      description: 'Financial management'
+    },
+    customer_service: {
+      label: 'Customer Service',
+      permissions: ['dashboard', 'messages', 'support', 'faq', 'attendance'],
+      description: 'Customer support'
+    }
+  };
+
+  const regions = [
+    'Arusha', 'Serengeti', 'Ngorongoro', 'Tarangire', 'Lake Manyara', 
+    'Kilimanjaro', 'Northern Circuit', 'Southern Circuit'
+  ];
+
+  // Check if user has permission to access this component
+  if (!isSuperAdmin() && !isAdmin()) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+          <p className="text-muted-foreground">You don't have permission to access staff management.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch staff data
+  const fetchStaff = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching staff:', error);
+        toast.error('Failed to fetch staff data');
+        return;
+      }
+
+      setStaff(data || []);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      toast.error('Failed to fetch staff data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create new staff member
+  const createStaffMember = async (userData: UserInsert) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: 'TempPassword123!', // Temporary password
+        email_confirm: true
+      });
+
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        toast.error('Failed to create user account');
+        return { success: false, error: authError.message };
+      }
+
+      if (!authData.user) {
+        toast.error('Failed to create user account');
+        return { success: false, error: 'No user data returned' };
+      }
+
+      // Create user profile in database
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          ...userData,
+          id: authData.user.id
+        });
+
+      if (dbError) {
+        console.error('Error creating user profile:', dbError);
+        // Clean up auth user if database insert fails
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        toast.error('Failed to create user profile');
+        return { success: false, error: dbError.message };
+      }
+
+      toast.success('Staff member created successfully');
+      await fetchStaff();
+      return { success: true };
+    } catch (error) {
+      console.error('Error creating staff member:', error);
+      toast.error('Failed to create staff member');
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Update staff member
+  const updateStaffMember = async (userId: string, updates: UserUpdate) => {
+    try {
+      setIsSubmitting(true);
+      
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating staff member:', error);
+        toast.error('Failed to update staff member');
+        return { success: false, error: error.message };
+      }
+
+      toast.success('Staff member updated successfully');
+      await fetchStaff();
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating staff member:', error);
+      toast.error('Failed to update staff member');
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Deactivate staff member
+  const deactivateStaffMember = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: false })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error deactivating staff member:', error);
+        toast.error('Failed to deactivate staff member');
+        return;
+      }
+
+      toast.success('Staff member deactivated successfully');
+      await fetchStaff();
+    } catch (error) {
+      console.error('Error deactivating staff member:', error);
+      toast.error('Failed to deactivate staff member');
+    }
+  };
+
+  // Reactivate staff member
+  const reactivateStaffMember = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: true })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error reactivating staff member:', error);
+        toast.error('Failed to reactivate staff member');
+        return;
+      }
+
+      toast.success('Staff member reactivated successfully');
+      await fetchStaff();
+    } catch (error) {
+      console.error('Error reactivating staff member:', error);
+      toast.error('Failed to reactivate staff member');
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.role) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const userData: UserInsert = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || null,
+      role: formData.role as any,
+      assigned_region: formData.assigned_region || null,
+      permissions: formData.permissions,
+      is_active: formData.is_active
+    };
+
+    if (editingUser) {
+      // Update existing user
+      const result = await updateStaffMember(editingUser.id, userData);
+      if (result.success) {
+        setIsEditDialogOpen(false);
+        setEditingUser(null);
+        resetForm();
+      }
+    } else {
+      // Create new user
+      const result = await createStaffMember(userData);
+      if (result.success) {
+        setIsAddDialogOpen(false);
+        resetForm();
+      }
+    }
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      role: '',
+      assigned_region: '',
+      permissions: [],
+      is_active: true
+    });
+  };
+
+  // Handle edit user
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role,
+      assigned_region: user.assigned_region || '',
+      permissions: user.permissions,
+      is_active: user.is_active
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle permission toggle
+  const handlePermissionToggle = (permission: string) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permission)
+        ? prev.permissions.filter(p => p !== permission)
+        : [...prev.permissions, permission]
+    }));
+  };
+
+  // Filter staff based on search and department
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === 'all' || 
+                             (member.assigned_region && member.assigned_region.toLowerCase() === selectedDepartment.toLowerCase());
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  // Calculate stats from actual data
+  const stats = [
+    { 
+      title: 'Total Staff', 
+      value: staff.length.toString(), 
+      icon: Users, 
+      color: 'text-blue-600' 
+    },
+    { 
+      title: 'Active Users', 
+      value: staff.filter(s => s.is_active).length.toString(), 
+      icon: UserCheck, 
+      color: 'text-green-600' 
+    },
+    { 
+      title: 'Inactive Users', 
+      value: staff.filter(s => !s.is_active).length.toString(), 
+      icon: Clock, 
+      color: 'text-orange-600' 
+    },
+    { 
+      title: 'Super Admins', 
+      value: staff.filter(s => s.role === 'super_admin').length.toString(), 
+      icon: AlertTriangle, 
+      color: 'text-red-600' 
     }
   ];
 
-  const departments = ['All', 'Operations', 'Sales', 'Finance', 'Customer Service'];
-  const roles = ['Operations Coordinator', 'Booking Manager', 'Finance Officer', 'Customer Service', 'Driver'];
-
-  const filteredStaff = staff.filter(member => 
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (selectedDepartment === 'all' || member.department.toLowerCase() === selectedDepartment.toLowerCase())
-  );
-
-  const stats = [
-    { title: 'Total Staff', value: '24', icon: Users, color: 'text-blue-600' },
-    { title: 'Active Users', value: '22', icon: UserCheck, color: 'text-green-600' },
-    { title: 'On Leave', value: '2', icon: Clock, color: 'text-orange-600' },
-    { title: 'Pending Reviews', value: '3', icon: AlertTriangle, color: 'text-red-600' }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading staff data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,65 +386,153 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
           <h1 className="text-3xl font-bold">Staff Management</h1>
           <p className="text-muted-foreground">Manage staff members, roles, and permissions</p>
         </div>
-        <Dialog>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               Add Staff Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Staff Member</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="Enter full name" />
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="Enter full name" 
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="Enter email address" 
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input 
+                    id="phone" 
+                    placeholder="Enter phone number" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select 
+                    value={formData.role} 
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        role: value,
+                        permissions: roleDefinitions[value as keyof typeof roleDefinitions]?.permissions || []
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(roleDefinitions).map(([key, role]) => (
+                        <SelectItem key={key} value={key}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{role.label}</span>
+                            <span className="text-sm text-muted-foreground">{role.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="region">Assigned Region</Label>
+                  <Select 
+                    value={formData.assigned_region} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No specific region</SelectItem>
+                      {regions.map(region => (
+                        <SelectItem key={region} value={region}>{region}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="is_active" 
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked as boolean }))}
+                    />
+                    <Label htmlFor="is_active">Active User</Label>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Enter email address" />
+              
+              <div className="mt-6">
+                <Label className="text-base font-medium">Permissions</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Permissions are automatically set based on the selected role. You can customize them below.
+                </p>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                  {[
+                    'dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 
+                    'forensic', 'attendance', 'trips', 'drivers', 'vehicles', 'payments', 
+                    'invoices', 'support', 'faq', 'my_trips'
+                  ].map(permission => (
+                    <div key={permission} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={permission}
+                        checked={formData.permissions.includes(permission)}
+                        onCheckedChange={() => handlePermissionToggle(permission)}
+                      />
+                      <Label htmlFor={permission} className="text-sm capitalize">
+                        {permission.replace('_', ' ')}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" placeholder="Enter phone number" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map(role => (
-                      <SelectItem key={role} value={role.toLowerCase()}>{role}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.slice(1).map(dept => (
-                      <SelectItem key={dept} value={dept.toLowerCase()}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="joinDate">Join Date</Label>
-                <Input id="joinDate" type="date" />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2 mt-6">
-              <Button variant="outline">Cancel</Button>
-              <Button>Add Staff Member</Button>
-            </div>
+              
+              <DialogFooter className="mt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    resetForm();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Staff Member'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -200,12 +577,12 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
                 </div>
                 <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by department" />
+                    <SelectValue placeholder="Filter by region" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments.slice(1).map(dept => (
-                      <SelectItem key={dept} value={dept.toLowerCase()}>{dept}</SelectItem>
+                    <SelectItem value="all">All Regions</SelectItem>
+                    {regions.map(region => (
+                      <SelectItem key={region} value={region.toLowerCase()}>{region}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -217,7 +594,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
                   <TableRow>
                     <TableHead>Staff Member</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
+                    <TableHead>Region</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Login</TableHead>
                     <TableHead>Actions</TableHead>
@@ -229,8 +606,10 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar>
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={member.avatar || ''} />
+                            <AvatarFallback>
+                              {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{member.name}</p>
@@ -238,22 +617,46 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{member.role}</TableCell>
-                      <TableCell>{member.department}</TableCell>
                       <TableCell>
-                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
-                          {member.status}
+                        <Badge variant="outline">
+                          {roleDefinitions[member.role as keyof typeof roleDefinitions]?.label || member.role}
                         </Badge>
                       </TableCell>
-                      <TableCell>{member.lastLogin}</TableCell>
+                      <TableCell>{member.assigned_region || 'No region'}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.is_active ? 'default' : 'secondary'}>
+                          {member.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEditUser(member)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {member.is_active ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => deactivateStaffMember(member.id)}
+                            >
+                              <EyeOff className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => reactivateStaffMember(member.id)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -271,14 +674,23 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {roles.map((role) => (
-                  <Card key={role}>
+                {Object.entries(roleDefinitions).map(([key, role]) => (
+                  <Card key={key}>
                     <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2">{role}</h3>
+                      <h3 className="font-semibold mb-2">{role.label}</h3>
                       <p className="text-sm text-muted-foreground mb-3">
-                        Permissions and access level for {role.toLowerCase()}
+                        {role.description}
                       </p>
-                      <Button variant="outline" size="sm">Edit Permissions</Button>
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Permissions:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {role.permissions.map(permission => (
+                            <Badge key={permission} variant="secondary" className="text-xs">
+                              {permission.replace('_', ' ')}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -304,6 +716,152 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ currentUser }) => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Staff Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Staff Member</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name *</Label>
+                <Input 
+                  id="edit-name" 
+                  placeholder="Enter full name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address *</Label>
+                <Input 
+                  id="edit-email" 
+                  type="email" 
+                  placeholder="Enter email address" 
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input 
+                  id="edit-phone" 
+                  placeholder="Enter phone number" 
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role *</Label>
+                <Select 
+                  value={formData.role} 
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      role: value,
+                      permissions: roleDefinitions[value as keyof typeof roleDefinitions]?.permissions || []
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(roleDefinitions).map(([key, role]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{role.label}</span>
+                          <span className="text-sm text-muted-foreground">{role.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-region">Assigned Region</Label>
+                <Select 
+                  value={formData.assigned_region} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No specific region</SelectItem>
+                    {regions.map(region => (
+                      <SelectItem key={region} value={region}>{region}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="edit-is_active" 
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked as boolean }))}
+                  />
+                  <Label htmlFor="edit-is_active">Active User</Label>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <Label className="text-base font-medium">Permissions</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Permissions are automatically set based on the selected role. You can customize them below.
+              </p>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                {[
+                  'dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 
+                  'forensic', 'attendance', 'trips', 'drivers', 'vehicles', 'payments', 
+                  'invoices', 'support', 'faq', 'my_trips'
+                ].map(permission => (
+                  <div key={permission} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`edit-${permission}`}
+                      checked={formData.permissions.includes(permission)}
+                      onCheckedChange={() => handlePermissionToggle(permission)}
+                    />
+                    <Label htmlFor={`edit-${permission}`} className="text-sm capitalize">
+                      {permission.replace('_', ' ')}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingUser(null);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Staff Member'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -26,13 +26,10 @@ import {
   Forward
 } from 'lucide-react';
 import { mockMessages, channelColors, priorityColors, Message } from '@/data/mockMessages';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface CentralizedMessagesProps {
-  currentUser: User;
-}
-
-const CentralizedMessages: React.FC<CentralizedMessagesProps> = ({ currentUser }) => {
+const CentralizedMessages: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [filterChannel, setFilterChannel] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');

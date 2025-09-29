@@ -14,13 +14,10 @@ import {
   Calendar,
   MessageSquare
 } from 'lucide-react';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface DriverDashboardProps {
-  currentUser: User;
-}
-
-const DriverDashboard: React.FC<DriverDashboardProps> = ({ currentUser }) => {
+const DriverDashboard: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const stats = [
     {
       title: 'Today\'s Trips',

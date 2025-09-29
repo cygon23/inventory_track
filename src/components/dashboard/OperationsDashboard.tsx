@@ -14,13 +14,10 @@ import {
   Fuel,
   UserCheck
 } from 'lucide-react';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface OperationsDashboardProps {
-  currentUser: User;
-}
-
-const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ currentUser }) => {
+const OperationsDashboard: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const stats = [
     {
       title: 'Active Trips',

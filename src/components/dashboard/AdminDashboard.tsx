@@ -12,13 +12,10 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface AdminDashboardProps {
-  currentUser: User;
-}
-
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
+const AdminDashboard: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const stats = [
     {
       title: 'Total Bookings',

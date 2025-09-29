@@ -17,18 +17,30 @@ import {
   Shield,
   Route
 } from 'lucide-react';
-import { User, rolePermissions } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 
 interface DashboardSidebarProps {
-  currentUser: User;
   isOpen: boolean;
   onClose: () => void;
   isMobile: boolean;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ currentUser, isOpen, onClose, isMobile }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, isMobile }) => {
+  const { user: currentUser } = useAuth();
   const location = useLocation();
+
+  // Role permissions mapping
+  const rolePermissions = {
+    super_admin: ['all'],
+    admin: ['dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 'forensic', 'attendance'],
+    admin_helper: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
+    booking_manager: ['dashboard', 'messages', 'customers', 'bookings', 'attendance'],
+    operations_coordinator: ['dashboard', 'messages', 'trips', 'drivers', 'vehicles', 'attendance'],
+    driver: ['dashboard', 'my_trips', 'reports', 'attendance'],
+    finance_officer: ['dashboard', 'payments', 'invoices', 'reports', 'messages', 'attendance'],
+    customer_service: ['dashboard', 'messages', 'support', 'faq', 'attendance']
+  };
 
   const allMenuItems = [
     {

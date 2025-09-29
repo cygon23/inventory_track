@@ -11,16 +11,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Bell, MessageSquare, Settings, LogOut, MapPin, Search, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { User, roleColors } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardHeaderProps {
-  currentUser: User;
   onLogout: () => void;
   onMenuClick: () => void;
   isMobile: boolean;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentUser, onLogout, onMenuClick, isMobile }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onLogout, onMenuClick, isMobile }) => {
+  const { user: currentUser } = useAuth();
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };

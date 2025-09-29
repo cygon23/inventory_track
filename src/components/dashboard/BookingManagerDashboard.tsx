@@ -14,13 +14,10 @@ import {
   Send,
   Eye
 } from 'lucide-react';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface BookingManagerDashboardProps {
-  currentUser: User;
-}
-
-const BookingManagerDashboard: React.FC<BookingManagerDashboardProps> = ({ currentUser }) => {
+const BookingManagerDashboard: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const stats = [
     {
       title: 'My Active Bookings',

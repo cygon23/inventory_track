@@ -2,30 +2,28 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHeader from './DashboardHeader';
-import { User } from '@/data/mockUsers';
+import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-interface DashboardLayoutProps {
-  currentUser: User;
-  onLogout: () => void;
-}
-
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ currentUser, onLogout }) => {
+const DashboardLayout: React.FC = () => {
+  const { user: currentUser, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader 
-        currentUser={currentUser} 
-        onLogout={onLogout}
+        onLogout={handleLogout}
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         isMobile={isMobile}
       />
       
       <div className="flex">
         <DashboardSidebar 
-          currentUser={currentUser} 
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           isMobile={isMobile}
