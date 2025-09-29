@@ -64,40 +64,21 @@ const AppRoutes: React.FC = () => {
 
   console.log('AppRoutes: user:', user, 'loading:', loading);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          <span>Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    console.log('AppRoutes: No user, redirecting to login');
-    return (
-      <Routes>
-        <Route path='/nav' element={<NavigationSwitcher />} />
-        <Route path='/login' element={<LoginPage />} />
-        <Route path='*' element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
-  console.log('AppRoutes: User found, role:', user.role);
-
   return (
     <Routes>
       <Route path='/nav' element={<NavigationSwitcher />} />
+      <Route path='/login' element={<LoginPage />} />
       <Route
         path='/'
         element={
-          <Navigate
-            to={`/${getRolePrefix(user.role)}/dashboard`}
-            replace
-          />
+          user
+            ? (
+              <Navigate
+                to={`/${getRolePrefix(user.role)}/dashboard`}
+                replace
+              />
+            )
+            : (<Navigate to="/login" replace />)
         }
       />
 
@@ -302,7 +283,7 @@ const AppRoutes: React.FC = () => {
         />
       </Route>
 
-      <Route path='*' element={<NotFound />} />
+      <Route path='*' element={user ? <NotFound /> : <Navigate to="/login" replace />} />
     </Routes>
   );
 };
