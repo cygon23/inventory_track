@@ -12,14 +12,14 @@ import { toast } from 'sonner';
 
 const UserManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const { isAdmin } = useRole();
+  const { isSuperAdmin, isAdmin } = useRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Check if user has permission to access this component
-  if (!isAdmin()) {
+  if (!isSuperAdmin() && !isAdmin()) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
