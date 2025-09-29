@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -45,27 +46,27 @@ interface Customer {
   upcomingTrip: string | null;
 }
 
-interface AddCustomerModalProps {
+interface EditCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddCustomer: (customer: Customer) => void;
+  customer: Customer | null;
+  onSave: (customer: Customer) => void;
 }
 
-const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
+const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
   open,
   onOpenChange,
-  onAddCustomer,
+  customer,
+  onSave,
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
     phone: "",
     country: "",
     preferences: [] as string[],
-    status: "new",
-    totalSpent: "$0",
+    status: "",
     upcomingTrip: "",
   });
 
@@ -75,13 +76,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   useEffect(() => {
     const countryObj = countries.getNames("en", { select: "official" });
     const list = Object.entries(countryObj).map(([code, name]) => ({
-      value: name as string,
-      label: name as string,
+      value: name,
+      label: name,
       flag: getFlagEmoji(code),
     }));
     list.sort((a, b) => a.label.localeCompare(b.label));
     setCountryOptions(list);
   }, []);
+
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        country: customer.country,
+        preferences: [...customer.preferences],
+        status: customer.status,
+        upcomingTrip: customer.upcomingTrip || "",
+      });
+    }
+  }, [customer]);
 
   const commonPreferences = [
     "Wildlife Photography",
@@ -97,17 +112,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   ];
 
   const statusOptions = [
-    "new",
     "active",
+    "new",
     "returning",
     "vip",
     "inquiry",
     "inactive",
   ];
-
-  const generateCustomerId = () => {
-    return `C${String(Math.floor(Math.random() * 900) + 100)}`;
-  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -133,7 +144,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.firstName || !formData.lastName || !formData.email) {
+    if (!formData.name || !formData.email) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -142,44 +153,30 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       return;
     }
 
-    const newCustomer: Customer = {
-      id: generateCustomerId(),
-      name: `${formData.firstName} ${formData.lastName}`,
+    if (!customer) return;
+
+    const updatedCustomer: Customer = {
+      ...customer,
+      name: formData.name,
       email: formData.email,
       phone: formData.phone,
       country: formData.country,
-      totalBookings: 0,
-      totalSpent: formData.totalSpent,
-      lastBooking: null,
-      status: formData.status,
-      rating: null,
-      joinDate: new Date().toISOString().split("T")[0],
       preferences: formData.preferences,
+      status: formData.status,
       upcomingTrip: formData.upcomingTrip || null,
     };
 
-    onAddCustomer(newCustomer);
+    onSave(updatedCustomer);
 
     toast({
-      title: "Customer Added",
-      description: `${formData.firstName} ${formData.lastName} has been added successfully.`,
+      title: "Customer Updated",
+      description: `${formData.name} has been updated successfully.`,
     });
 
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      country: "",
-      preferences: [],
-      status: "new",
-      totalSpent: "$0",
-      upcomingTrip: "",
-    });
     onOpenChange(false);
   };
 
-  // ✅ Utility to get flag emoji from ISO code
+  // Utility to get flag emoji from ISO code
   const getFlagEmoji = (countryCode: string) =>
     countryCode
       .toUpperCase()
@@ -187,13 +184,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         String.fromCodePoint(127397 + char.charCodeAt(0))
       );
 
+  if (!customer) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle>Edit Customer</DialogTitle>
           <DialogDescription>
-            Create a new customer profile with contact details and preferences.
+            Update customer profile information and preferences.
           </DialogDescription>
         </DialogHeader>
 
@@ -201,31 +200,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           {/* Personal Info */}
           <div className='space-y-4'>
             <h3 className='text-lg font-semibold'>Personal Information</h3>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='firstName'>First Name *</Label>
-                <Input
-                  id='firstName'
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    handleInputChange("firstName", e.target.value)
-                  }
-                  placeholder='Enter first name'
-                  required
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='lastName'>Last Name *</Label>
-                <Input
-                  id='lastName'
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    handleInputChange("lastName", e.target.value)
-                  }
-                  placeholder='Enter last name'
-                  required
-                />
-              </div>
+            <div className='space-y-2'>
+              <Label htmlFor='name'>Full Name *</Label>
+              <Input
+                id='name'
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                placeholder='Enter full name'
+                required
+              />
             </div>
           </div>
 
@@ -274,7 +257,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='status'>Customer Status</Label>
+                <Label htmlFor='status'>Status</Label>
                 <ShadcnSelect
                   value={formData.status}
                   onValueChange={(value) => handleInputChange("status", value)}>
@@ -289,35 +272,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     ))}
                   </SelectContent>
                 </ShadcnSelect>
-              </div>
-            </div>
-          </div>
-
-          {/* Business Info */}
-          <div className='space-y-4'>
-            <h3 className='text-lg font-semibold'>Business Information</h3>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='totalSpent'>Total Spent</Label>
-                <Input
-                  id='totalSpent'
-                  value={formData.totalSpent}
-                  onChange={(e) =>
-                    handleInputChange("totalSpent", e.target.value)
-                  }
-                  placeholder='$0'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='upcomingTrip'>Upcoming Trip</Label>
-                <Input
-                  id='upcomingTrip'
-                  value={formData.upcomingTrip}
-                  onChange={(e) =>
-                    handleInputChange("upcomingTrip", e.target.value)
-                  }
-                  placeholder='e.g., 3-Day Serengeti Explorer'
-                />
               </div>
             </div>
           </div>
@@ -377,10 +331,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             )}
           </div>
 
+          {/* Upcoming Trip */}
+          <div className='space-y-2'>
+            <Label htmlFor='upcomingTrip'>Upcoming Trip</Label>
+            <Input
+              id='upcomingTrip'
+              value={formData.upcomingTrip}
+              onChange={(e) =>
+                handleInputChange("upcomingTrip", e.target.value)
+              }
+              placeholder='e.g., 3-Day Serengeti Explorer'
+            />
+          </div>
+
           {/* Actions */}
           <div className='flex flex-col sm:flex-row gap-3 pt-4'>
             <Button type='submit' className='flex-1'>
-              Add Customer
+              Save Changes
             </Button>
             <Button
               type='button'
@@ -396,4 +363,4 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   );
 };
 
-export default AddCustomerModal;
+export default EditCustomerModal;
