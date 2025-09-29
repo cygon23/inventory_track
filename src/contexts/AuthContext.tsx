@@ -50,6 +50,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  // Create a user profile automatically when it does not exist
+  const provisionUserProfile = async (sbUser: SupabaseUser): Promise<User | null> => {
+    try {
+      console.log('AuthContext: Provisioning user profile for', sbUser.id)
+      const nowIso = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          id: sbUser.id,
+          name: sbUser.email?.split('@')[0] || 'New User',
+          email: sbUser.email || '',
+          role: 'admin',
+          avatar: null,
+          is_active: true,
+          last_login: nowIso,
+          permissions: ['all'],
+          assigned_region: null,
+          phone: null,
+          created_at: nowIso,
+          updated_at: nowIso,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error provisioning user profile:', error)
+        return null
+      }
+
+      return data
+    } catch (error) {
+      console.error('Error provisioning user profile:', error)
+      return null
+    }
+  }
+
   const updateLastLogin = async (userId: string) => {
     try {
       await supabase
@@ -68,10 +104,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) return { success: false, error: error.message }
       if (!data.user) return { success: false, error: 'No user data returned' }
 
-      const userProfile = await fetchUserProfile(data.user.id)
+      let userProfile = await fetchUserProfile(data.user.id)
       if (!userProfile) {
-        await supabase.auth.signOut()
-        return { success: false, error: 'User profile not found. Please contact administrator.' }
+        userProfile = await provisionUserProfile(data.user)
+        if (!userProfile) {
+          await supabase.auth.signOut()
+          return { success: false, error: 'User profile could not be created. Please contact administrator.' }
+        }
       }
 
       if (!userProfile.is_active) {
@@ -151,7 +190,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSupabaseUser(session.user)
           setSession(session)
 
-          const userProfile = await fetchUserProfile(session.user.id)
+          let userProfile = await fetchUserProfile(session.user.id)
+          if (!userProfile) {
+            userProfile = await provisionUserProfile(session.user)
+          }
           if (userProfile && userProfile.is_active) {
             setUser(userProfile)
           } else {
@@ -182,7 +224,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         try {
           if (session?.user) {
-            const userProfile = await fetchUserProfile(session.user.id)
+            let userProfile = await fetchUserProfile(session.user.id)
+            if (!userProfile) {
+              userProfile = await provisionUserProfile(session.user)
+            }
             if (userProfile && userProfile.is_active) {
               setUser(userProfile)
               await updateLastLogin(session.user.id)
