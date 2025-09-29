@@ -62,17 +62,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Show loading spinner while checking auth state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  // Always render form so users can attempt login even if auth is initializing
 
   return (
     <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4">
