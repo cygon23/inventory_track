@@ -20,27 +20,12 @@ import {
   X,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  totalBookings: number;
-  totalSpent: string;
-  lastBooking: string | null;
-  status: string;
-  rating: number | null;
-  joinDate: string;
-  preferences: string[];
-  upcomingTrip: string | null;
-}
+import { CustomerInput } from "@/lib/customerService";
 
 interface ImportCustomersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (customers: Customer[]) => void;
+  onImport: (customers: CustomerInput[], fileName: string) => void;
 }
 
 const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
@@ -82,9 +67,9 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
       const requiredColumns = ["name", "email"];
       const firstRow = jsonData[0] as any;
       if (firstRow) {
-        const columns = Object.keys(firstRow);
+        const columns = Object.keys(firstRow).map((k) => k.toLowerCase());
         requiredColumns.forEach((col) => {
-          if (!columns.some((c) => c.toLowerCase().includes(col))) {
+          if (!columns.includes(col)) {
             errors.push(`Missing required column: ${col}`);
           }
         });
@@ -92,8 +77,9 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
 
       // Validate email format in preview
       preview.forEach((row: any, index) => {
-        if (row.email && !/\S+@\S+\.\S+/.test(row.email)) {
-          errors.push(`Invalid email format in row ${index + 2}: ${row.email}`);
+        const email = row.email || row.Email;
+        if (email && !/\S+@\S+\.\S+/.test(email)) {
+          errors.push(`Invalid email format in row ${index + 2}: ${email}`);
         }
       });
 
@@ -108,10 +94,6 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const generateCustomerId = () => {
-    return `C${String(Math.floor(Math.random() * 900) + 100)}`;
   };
 
   const handleImport = () => {
@@ -135,50 +117,43 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const customers: Customer[] = jsonData.map((row: any) => {
+        const customers: CustomerInput[] = jsonData.map((row: any) => {
           // Parse preferences if they exist
           let preferences: string[] = [];
-          if (row.preferences) {
-            if (typeof row.preferences === "string") {
-              preferences = row.preferences
+          if (row.preferences || row.Preferences) {
+            const prefString = row.preferences || row.Preferences;
+            if (typeof prefString === "string") {
+              preferences = prefString
                 .split(",")
-                .map((p: string) => p.trim());
+                .map((p: string) => p.trim())
+                .filter(Boolean);
             }
           }
 
+          // Handle name variations
+          let name = row.name || row.Name || "";
+          if (
+            !name &&
+            (row.firstName || row.first_name || row.lastName || row.last_name)
+          ) {
+            const firstName = row.firstName || row.first_name || "";
+            const lastName = row.lastName || row.last_name || "";
+            name = `${firstName} ${lastName}`.trim();
+          }
+
           return {
-            id: generateCustomerId(),
-            name:
-              row.name ||
-              row.Name ||
-              `${row.firstName || row.first_name || ""} ${
-                row.lastName || row.last_name || ""
-              }`.trim(),
+            name,
             email: row.email || row.Email || "",
             phone: row.phone || row.Phone || row.phoneNumber || "",
             country: row.country || row.Country || "",
-            totalBookings:
-              parseInt(row.totalBookings || row.total_bookings || "0") || 0,
-            totalSpent: row.totalSpent || row.total_spent || "$0",
-            lastBooking: row.lastBooking || row.last_booking || null,
             status: (row.status || row.Status || "new").toLowerCase(),
-            rating: parseFloat(row.rating || row.Rating) || null,
-            joinDate:
-              row.joinDate ||
-              row.join_date ||
-              new Date().toISOString().split("T")[0],
-            preferences: preferences,
-            upcomingTrip: row.upcomingTrip || row.upcoming_trip || null,
+            total_spent: row.totalSpent || row.total_spent || "$0",
+            upcoming_trip: row.upcomingTrip || row.upcoming_trip || null,
+            preferences,
           };
         });
 
-        onImport(customers);
-
-        toast({
-          title: "Import Successful",
-          description: `${customers.length} customers imported successfully.`,
-        });
-
+        onImport(customers, selectedFile.name);
         handleClose();
       } catch (error) {
         toast({
@@ -212,14 +187,10 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
         email: "john.smith@email.com",
         phone: "+1-555-0123",
         country: "United States",
-        totalBookings: 3,
-        totalSpent: "$12,800",
-        lastBooking: "2024-01-15",
         status: "active",
-        rating: 4.9,
-        joinDate: "2023-08-15",
+        total_spent: "$12,800",
         preferences: "Wildlife Photography, Luxury Lodges",
-        upcomingTrip: "3-Day Serengeti Explorer",
+        upcoming_trip: "3-Day Serengeti Explorer",
       },
     ];
 
@@ -238,7 +209,8 @@ const ImportCustomersModal: React.FC<ImportCustomersModalProps> = ({
             <span>Import Customers from Excel</span>
           </DialogTitle>
           <DialogDescription>
-            Upload an Excel file to import multiple customers at once
+            Upload an Excel file to import multiple customers at once. Each
+            customer will be assigned a unique LT-XXXX ID automatically.
           </DialogDescription>
         </DialogHeader>
 
