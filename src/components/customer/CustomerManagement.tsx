@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -10,14 +10,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import AddCustomerModal from "@/components/forms/AddCustomerModal";
 import CustomerDetailModal from "@/components/modals/CustomerDetailModal";
 import EditCustomerModal from "@/components/modals/EditCustomerModal";
 import ImportCustomersModal from "@/components/modals/ImportCustomersModal";
 import {
   Search,
-  Filter,
   MoreVertical,
   User,
   Calendar,
@@ -30,6 +29,7 @@ import {
   Edit,
   Plus,
   Upload,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -46,22 +46,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { User as UserType } from "@/data/mockUsers";
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  totalBookings: number;
-  totalSpent: string;
-  lastBooking: string | null;
-  status: string;
-  rating: number | null;
-  joinDate: string;
-  preferences: string[];
-  upcomingTrip: string | null;
-}
+import { useCustomers, useCustomerStats } from "@/hooks/useCustomers";
+import {
+  Customer,
+  CustomerInput,
+  CustomerService,
+} from "@/lib/customerService";
 
 interface CustomerManagementProps {
   currentUser: UserType;
@@ -81,129 +71,72 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
     null
   );
 
-  const [customers, setCustomers] = useState<Customer[]>([
-    {
-      id: "C001",
-      name: "John Smith",
-      email: "john.smith@email.com",
-      phone: "+1-555-0123",
-      country: "United States",
-      totalBookings: 3,
-      totalSpent: "$12,800",
-      lastBooking: "2024-01-15",
-      status: "active",
-      rating: 4.9,
-      joinDate: "2023-08-15",
-      preferences: ["Wildlife Photography", "Luxury Lodges"],
-      upcomingTrip: "3-Day Serengeti Explorer",
-    },
-    {
-      id: "C002",
-      name: "Emma Thompson",
-      email: "emma.thompson@email.com",
-      phone: "+44-20-7946-0958",
-      country: "United Kingdom",
-      totalBookings: 1,
-      totalSpent: "$6,250",
-      lastBooking: "2024-01-18",
-      status: "new",
-      rating: 5.0,
-      joinDate: "2024-01-10",
-      preferences: ["Honeymoon Packages", "Romantic Settings"],
-      upcomingTrip: "5-Day Northern Circuit",
-    },
-    {
-      id: "C003",
-      name: "Carlos Rodriguez",
-      email: "carlos.rodriguez@email.com",
-      phone: "+34-91-123-4567",
-      country: "Spain",
-      totalBookings: 2,
-      totalSpent: "$4,200",
-      lastBooking: "2023-12-20",
-      status: "returning",
-      rating: 4.7,
-      joinDate: "2023-06-20",
-      preferences: ["Cultural Experiences", "Local Cuisine"],
-      upcomingTrip: null,
-    },
-    {
-      id: "C004",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@email.com",
-      phone: "+1-555-0198",
-      country: "United States",
-      totalBookings: 4,
-      totalSpent: "$18,900",
-      lastBooking: "2024-01-20",
-      status: "vip",
-      rating: 4.8,
-      joinDate: "2022-11-05",
-      preferences: ["Family Safari", "Educational Tours", "Conservation"],
-      upcomingTrip: "4-Day Tarangire & Manyara",
-    },
-    {
-      id: "C005",
-      name: "Michael Brown",
-      email: "michael.brown@email.com",
-      phone: "+1-555-0167",
-      country: "Canada",
-      totalBookings: 0,
-      totalSpent: "$0",
-      lastBooking: null,
-      status: "inquiry",
-      rating: null,
-      joinDate: "2024-01-22",
-      preferences: ["Adventure Safari", "Photography"],
-      upcomingTrip: null,
-    },
-    {
-      id: "C006",
-      name: "Lisa Wilson",
-      email: "lisa.wilson@email.com",
-      phone: "+61-2-9876-5432",
-      country: "Australia",
-      totalBookings: 1,
-      totalSpent: "$8,500",
-      lastBooking: "2023-11-30",
-      status: "active",
-      rating: 4.9,
-      joinDate: "2023-09-15",
-      preferences: ["Solo Travel", "Wildlife Conservation"],
-      upcomingTrip: null,
-    },
-  ]);
+  // Use custom hooks
+  const {
+    customers,
+    loading,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    importCustomers,
+    fetchCustomers,
+  } = useCustomers();
 
-  const stats = [
-    {
-      title: "Total Customers",
-      value: customers.length.toString(),
-      change: "+12 this month",
-      icon: User,
-      color: "text-primary",
-    },
-    {
-      title: "Active Customers",
-      value: customers.filter((c) => c.status === "active").length.toString(),
-      change: "57% of total",
-      icon: Star,
-      color: "text-success",
-    },
-    {
-      title: "New This Month",
-      value: customers.filter((c) => c.status === "new").length.toString(),
-      change: "+18% vs last month",
-      icon: Plus,
-      color: "text-warning",
-    },
-    {
-      title: "Avg. Customer Value",
-      value: "$8,450",
-      change: "+5% this quarter",
-      icon: Calendar,
-      color: "text-success",
-    },
-  ];
+  const { stats, loading: statsLoading } = useCustomerStats();
+
+  // Filter customers locally for immediate UI response
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((customer) => {
+      const matchesSearch =
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.custom_id.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilter =
+        filterStatus === "all" || customer.status === filterStatus;
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [customers, searchTerm, filterStatus]);
+
+  // Calculate stats from data
+  const statsDisplay = useMemo(() => {
+    if (!stats) return [];
+
+    return [
+      {
+        title: "Total Customers",
+        value: stats.total.toString(),
+        change: "+12 this month",
+        icon: User,
+        color: "text-primary",
+      },
+      {
+        title: "Active Customers",
+        value: stats.active.toString(),
+        change: `${
+          stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0
+        }% of total`,
+        icon: Star,
+        color: "text-success",
+      },
+      {
+        title: "New This Month",
+        value: stats.new.toString(),
+        change: "+18% vs last month",
+        icon: Plus,
+        color: "text-warning",
+      },
+      {
+        title: "Avg. Customer Value",
+        value: CustomerService.formatTotalSpent(stats.averageValue),
+        change: "+5% this quarter",
+        icon: Calendar,
+        color: "text-success",
+      },
+    ];
+  }, [stats]);
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -232,18 +165,6 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
       .toUpperCase();
   };
 
-  const filteredCustomers = customers.filter((customer) => {
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.country.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesFilter =
-      filterStatus === "all" || customer.status === filterStatus;
-
-    return matchesSearch && matchesFilter;
-  });
-
   // Action handlers
   const handleViewProfile = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -263,21 +184,47 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
     navigate("/booking/messages", { state: { customerId } });
   };
 
-  const handleAddCustomer = (newCustomer: Customer) => {
-    setCustomers((prev) => [...prev, newCustomer]);
+  const handleAddCustomer = async (customerData: CustomerInput) => {
+    const newCustomer = await addCustomer(customerData);
+    if (newCustomer) {
+      setIsAddModalOpen(false);
+    }
   };
 
-  const handleUpdateCustomer = (updatedCustomer: Customer) => {
-    setCustomers((prev) =>
-      prev.map((customer) =>
-        customer.id === updatedCustomer.id ? updatedCustomer : customer
-      )
-    );
+  const handleUpdateCustomer = async (customerData: Partial<CustomerInput>) => {
+    if (!selectedCustomer) return;
+
+    const updated = await updateCustomer(selectedCustomer.id, customerData);
+    if (updated) {
+      setIsEditModalOpen(false);
+      setSelectedCustomer(null);
+    }
   };
 
-  const handleImportCustomers = (importedCustomers: Customer[]) => {
-    setCustomers((prev) => [...prev, ...importedCustomers]);
+  const handleImportCustomers = async (
+    customersData: CustomerInput[],
+    fileName: string
+  ) => {
+    await importCustomers(customersData, fileName);
+    setIsImportModalOpen(false);
   };
+
+  // Format customer for modals (convert to UI format)
+  const formatCustomerForModal = (customer: Customer) => ({
+    id: customer.custom_id, // Use custom_id for display
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    country: customer.country,
+    totalBookings: customer.total_bookings,
+    totalSpent: CustomerService.formatTotalSpent(customer.total_spent),
+    lastBooking: customer.last_booking,
+    status: customer.status,
+    rating: customer.rating,
+    joinDate: customer.join_date,
+    preferences: customer.preferences,
+    upcomingTrip: customer.upcoming_trip,
+  });
 
   return (
     <div className='space-y-6'>
@@ -312,29 +259,35 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
 
       {/* Stats */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className='safari-card'>
-              <CardContent className='p-4 md:p-6'>
-                <div className='flex items-center justify-between'>
-                  <div className='space-y-1'>
-                    <p className='text-sm font-medium text-muted-foreground'>
-                      {stat.title}
-                    </p>
-                    <p className='text-xl md:text-2xl font-bold'>
-                      {stat.value}
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      {stat.change}
-                    </p>
+        {statsLoading ? (
+          <div className='col-span-full flex justify-center p-8'>
+            <Loader2 className='h-8 w-8 animate-spin text-primary' />
+          </div>
+        ) : (
+          statsDisplay.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index} className='safari-card'>
+                <CardContent className='p-4 md:p-6'>
+                  <div className='flex items-center justify-between'>
+                    <div className='space-y-1'>
+                      <p className='text-sm font-medium text-muted-foreground'>
+                        {stat.title}
+                      </p>
+                      <p className='text-xl md:text-2xl font-bold'>
+                        {stat.value}
+                      </p>
+                      <p className='text-xs text-muted-foreground'>
+                        {stat.change}
+                      </p>
+                    </div>
+                    <Icon className={`h-6 w-6 md:h-8 md:w-8 ${stat.color}`} />
                   </div>
-                  <Icon className={`h-6 w-6 md:h-8 md:w-8 ${stat.color}`} />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -344,7 +297,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
             <div className='relative'>
               <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
               <Input
-                placeholder='Search customers by name, email, or country...'
+                placeholder='Search by name, email, country, or customer ID (LT-XXXX)...'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className='pl-10 h-12'
@@ -393,138 +346,160 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className='p-0'>
-          <div className='overflow-x-auto'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className='hidden md:table-cell'>
-                    Contact
-                  </TableHead>
-                  <TableHead className='hidden lg:table-cell'>
-                    Location
-                  </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='hidden sm:table-cell'>
-                    Bookings
-                  </TableHead>
-                  <TableHead className='hidden lg:table-cell'>
-                    Total Spent
-                  </TableHead>
-                  <TableHead className='hidden xl:table-cell'>Rating</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div className='flex items-center space-x-3'>
-                        <Avatar className='h-10 w-10'>
-                          <AvatarFallback>
-                            {getInitials(customer.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className='font-medium'>{customer.name}</p>
-                          <p className='text-sm text-muted-foreground'>
-                            ID: {customer.id}
-                          </p>
-                          {customer.upcomingTrip && (
-                            <p className='text-xs text-primary font-medium'>
-                              Upcoming: {customer.upcomingTrip}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className='hidden md:table-cell'>
-                      <div className='space-y-1'>
-                        <div className='flex items-center space-x-2'>
-                          <Mail className='h-3 w-3 text-muted-foreground' />
-                          <span className='text-sm'>{customer.email}</span>
-                        </div>
-                        <div className='flex items-center space-x-2'>
-                          <Phone className='h-3 w-3 text-muted-foreground' />
-                          <span className='text-sm'>{customer.phone}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className='hidden lg:table-cell'>
-                      <div className='flex items-center space-x-2'>
-                        <MapPin className='h-4 w-4 text-muted-foreground' />
-                        <span className='text-sm'>{customer.country}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(customer.status)}>
-                        {formatStatus(customer.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className='hidden sm:table-cell'>
-                      <div className='text-center'>
-                        <p className='font-medium'>{customer.totalBookings}</p>
-                        <p className='text-xs text-muted-foreground'>
-                          {customer.lastBooking
-                            ? `Last: ${customer.lastBooking}`
-                            : "No bookings"}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className='hidden lg:table-cell'>
-                      <p className='font-medium'>{customer.totalSpent}</p>
-                    </TableCell>
-                    <TableCell className='hidden xl:table-cell'>
-                      {customer.rating ? (
-                        <div className='flex items-center space-x-1'>
-                          <Star className='h-4 w-4 text-warning fill-current' />
-                          <span>{customer.rating}</span>
-                        </div>
-                      ) : (
-                        <span className='text-muted-foreground'>N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-10 w-10 p-0'>
-                            <MoreVertical className='h-4 w-4' />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align='end'
-                          className='bg-popover z-50'>
-                          <DropdownMenuItem
-                            onClick={() => handleViewProfile(customer)}>
-                            <Eye className='mr-2 h-4 w-4' />
-                            View Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleEditCustomer(customer)}>
-                            <Edit className='mr-2 h-4 w-4' />
-                            Edit Customer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleBookingHistory(customer.id)}>
-                            <Calendar className='mr-2 h-4 w-4' />
-                            Booking History
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleSendMessage(customer.id)}>
-                            <MessageSquare className='mr-2 h-4 w-4' />
-                            Send Message
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+          {loading ? (
+            <div className='flex justify-center items-center p-12'>
+              <Loader2 className='h-8 w-8 animate-spin text-primary' />
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className='text-center p-12'>
+              <p className='text-muted-foreground'>No customers found</p>
+            </div>
+          ) : (
+            <div className='overflow-x-auto'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className='hidden md:table-cell'>
+                      Contact
+                    </TableHead>
+                    <TableHead className='hidden lg:table-cell'>
+                      Location
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className='hidden sm:table-cell'>
+                      Bookings
+                    </TableHead>
+                    <TableHead className='hidden lg:table-cell'>
+                      Total Spent
+                    </TableHead>
+                    <TableHead className='hidden xl:table-cell'>
+                      Rating
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <div className='flex items-center space-x-3'>
+                          <Avatar className='h-10 w-10'>
+                            <AvatarFallback>
+                              {getInitials(customer.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className='font-medium'>{customer.name}</p>
+                            <p className='text-sm text-muted-foreground'>
+                              ID: {customer.custom_id}
+                            </p>
+                            {customer.upcoming_trip && (
+                              <p className='text-xs text-primary font-medium'>
+                                Upcoming: {customer.upcoming_trip}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className='hidden md:table-cell'>
+                        <div className='space-y-1'>
+                          <div className='flex items-center space-x-2'>
+                            <Mail className='h-3 w-3 text-muted-foreground' />
+                            <span className='text-sm'>{customer.email}</span>
+                          </div>
+                          <div className='flex items-center space-x-2'>
+                            <Phone className='h-3 w-3 text-muted-foreground' />
+                            <span className='text-sm'>{customer.phone}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className='hidden lg:table-cell'>
+                        <div className='flex items-center space-x-2'>
+                          <MapPin className='h-4 w-4 text-muted-foreground' />
+                          <span className='text-sm'>{customer.country}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(customer.status)}>
+                          {formatStatus(customer.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className='hidden sm:table-cell'>
+                        <div className='text-center'>
+                          <p className='font-medium'>
+                            {customer.total_bookings}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            {customer.last_booking
+                              ? `Last: ${customer.last_booking}`
+                              : "No bookings"}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className='hidden lg:table-cell'>
+                        <p className='font-medium'>
+                          {CustomerService.formatTotalSpent(
+                            customer.total_spent
+                          )}
+                        </p>
+                      </TableCell>
+                      <TableCell className='hidden xl:table-cell'>
+                        {customer.rating ? (
+                          <div className='flex items-center space-x-1'>
+                            <Star className='h-4 w-4 text-warning fill-current' />
+                            <span>{customer.rating}</span>
+                          </div>
+                        ) : (
+                          <span className='text-muted-foreground'>N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              className='h-10 w-10 p-0'>
+                              <MoreVertical className='h-4 w-4' />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align='end'
+                            className='bg-popover z-50'>
+                            <DropdownMenuItem
+                              onClick={() => handleViewProfile(customer)}>
+                              <Eye className='mr-2 h-4 w-4' />
+                              View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditCustomer(customer)}>
+                              <Edit className='mr-2 h-4 w-4' />
+                              Edit Customer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleBookingHistory(customer.custom_id)
+                              }>
+                              <Calendar className='mr-2 h-4 w-4' />
+                              Booking History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleSendMessage(customer.custom_id)
+                              }>
+                              <MessageSquare className='mr-2 h-4 w-4' />
+                              Send Message
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -544,13 +519,17 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
       <CustomerDetailModal
         open={isDetailModalOpen}
         onOpenChange={setIsDetailModalOpen}
-        customer={selectedCustomer}
+        customer={
+          selectedCustomer ? formatCustomerForModal(selectedCustomer) : null
+        }
       />
 
       <EditCustomerModal
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
-        customer={selectedCustomer}
+        customer={
+          selectedCustomer ? formatCustomerForModal(selectedCustomer) : null
+        }
         onSave={handleUpdateCustomer}
       />
     </div>
