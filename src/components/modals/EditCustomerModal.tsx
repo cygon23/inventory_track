@@ -9,10 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CustomerInput } from "@/lib/customerService";
 
 // Country libs
 import countries from "i18n-iso-countries";
@@ -30,8 +30,9 @@ import {
 
 countries.registerLocale(enLocale);
 
-interface Customer {
-  id: string;
+// UI Customer interface (from parent component)
+interface UICustomer {
+  id: string; // This is the custom_id (LT-XXXX)
   name: string;
   email: string;
   phone: string;
@@ -49,8 +50,8 @@ interface Customer {
 interface EditCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customer: Customer | null;
-  onSave: (customer: Customer) => void;
+  customer: UICustomer | null;
+  onSave: (customerData: Partial<CustomerInput>) => void;
 }
 
 const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
@@ -67,7 +68,7 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
     country: "",
     preferences: [] as string[],
     status: "",
-    upcomingTrip: "",
+    upcoming_trip: "",
   });
 
   const [currentPreference, setCurrentPreference] = useState("");
@@ -93,7 +94,7 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         country: customer.country,
         preferences: [...customer.preferences],
         status: customer.status,
-        upcomingTrip: customer.upcomingTrip || "",
+        upcoming_trip: customer.upcomingTrip || "",
       });
     }
   }, [customer]);
@@ -155,25 +156,19 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
 
     if (!customer) return;
 
-    const updatedCustomer: Customer = {
-      ...customer,
+    // Create CustomerInput object for Supabase update
+    const updatedData: Partial<CustomerInput> = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
       country: formData.country,
       preferences: formData.preferences,
       status: formData.status,
-      upcomingTrip: formData.upcomingTrip || null,
+      upcoming_trip: formData.upcoming_trip || null,
     };
 
-    onSave(updatedCustomer);
-
-    toast({
-      title: "Customer Updated",
-      description: `${formData.name} has been updated successfully.`,
-    });
-
-    onOpenChange(false);
+    // Call the parent handler (which will call the Supabase service)
+    onSave(updatedData);
   };
 
   // Utility to get flag emoji from ISO code
@@ -192,7 +187,8 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         <DialogHeader>
           <DialogTitle>Edit Customer</DialogTitle>
           <DialogDescription>
-            Update customer profile information and preferences.
+            Update customer profile information and preferences for{" "}
+            {customer.id}
           </DialogDescription>
         </DialogHeader>
 
@@ -333,12 +329,12 @@ const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
 
           {/* Upcoming Trip */}
           <div className='space-y-2'>
-            <Label htmlFor='upcomingTrip'>Upcoming Trip</Label>
+            <Label htmlFor='upcoming_trip'>Upcoming Trip</Label>
             <Input
-              id='upcomingTrip'
-              value={formData.upcomingTrip}
+              id='upcoming_trip'
+              value={formData.upcoming_trip}
               onChange={(e) =>
-                handleInputChange("upcomingTrip", e.target.value)
+                handleInputChange("upcoming_trip", e.target.value)
               }
               placeholder='e.g., 3-Day Serengeti Explorer'
             />
