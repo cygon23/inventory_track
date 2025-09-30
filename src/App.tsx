@@ -33,18 +33,21 @@ import SystemSettings from "./components/admin/SystemSettings";
 import UserManagement from "./components/admin/UserManagement";
 import ForensicMonitoring from "./components/admin/ForensicMonitoring";
 import AttendanceManagement from "./components/staff/AttendanceManagement";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      <div className='min-h-screen bg-gradient-warm flex items-center justify-center'>
+        <div className='flex items-center space-x-2'>
+          <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary'></div>
           <span>Loading...</span>
         </div>
       </div>
@@ -52,7 +55,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to='/login' replace />;
   }
 
   return <>{children}</>;
@@ -62,7 +65,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AppRoutes: React.FC = () => {
   const { user, loading } = useAuth();
 
-  console.log('AppRoutes: user:', user, 'loading:', loading);
+  console.log("AppRoutes: user:", user, "loading:", loading);
 
   return (
     <Routes>
@@ -71,14 +74,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path='/'
         element={
-          user
-            ? (
-              <Navigate
-                to={`/${getRolePrefix(user.role)}/dashboard`}
-                replace
-              />
-            )
-            : (<Navigate to="/login" replace />)
+          loading ? (
+            <div className='min-h-screen flex items-center justify-center'>
+              <Loader2 className='h-6 w-6 animate-spin' />
+            </div>
+          ) : user ? (
+            <Navigate to={`/${getRolePrefix(user.role)}/dashboard`} replace />
+          ) : (
+            <Navigate to='/login' replace />
+          )
         }
       />
 
@@ -90,46 +94,16 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<AdminDashboard />}
-        />
-        <Route
-          path='messages'
-          element={<CentralizedMessages />}
-        />
-        <Route
-          path='customers'
-          element={<CustomerManagement />}
-        />
-        <Route
-          path='bookings'
-          element={<BookingManagement />}
-        />
-        <Route
-          path='staff'
-          element={<StaffManagement />}
-        />
-        <Route
-          path='reports'
-          element={<Reports />}
-        />
-        <Route
-          path='settings'
-          element={<SystemSettings />}
-        />
-        <Route
-          path='users'
-          element={<UserManagement />}
-        />
-        <Route
-          path='forensic'
-          element={<ForensicMonitoring />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='dashboard' element={<AdminDashboard />} />
+        <Route path='messages' element={<CentralizedMessages />} />
+        <Route path='customers' element={<CustomerManagement />} />
+        <Route path='bookings' element={<BookingManagement />} />
+        <Route path='staff' element={<StaffManagement />} />
+        <Route path='reports' element={<Reports />} />
+        <Route path='settings' element={<SystemSettings />} />
+        <Route path='users' element={<UserManagement />} />
+        <Route path='forensic' element={<ForensicMonitoring />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
       {/* Booking Manager Routes */}
@@ -140,26 +114,11 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<BookingManagerDashboard />}
-        />
-        <Route
-          path='messages'
-          element={<CentralizedMessages />}
-        />
-        <Route
-          path='customers'
-          element={<CustomerManagement />}
-        />
-        <Route
-          path='bookings'
-          element={<BookingManagement />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='dashboard' element={<BookingManagerDashboard />} />
+        <Route path='messages' element={<CentralizedMessages />} />
+        <Route path='customers' element={<CustomerManagement />} />
+        <Route path='bookings' element={<BookingManagement />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
       {/* Operations Routes */}
@@ -170,30 +129,12 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<OperationsDashboard />}
-        />
-        <Route
-          path='messages'
-          element={<CentralizedMessages />}
-        />
-        <Route
-          path='trips'
-          element={<TripManagement />}
-        />
-        <Route
-          path='drivers'
-          element={<DriverAssignment />}
-        />
-        <Route
-          path='vehicles'
-          element={<VehicleManagement />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='dashboard' element={<OperationsDashboard />} />
+        <Route path='messages' element={<CentralizedMessages />} />
+        <Route path='trips' element={<TripManagement />} />
+        <Route path='drivers' element={<DriverAssignment />} />
+        <Route path='vehicles' element={<VehicleManagement />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
       {/* Driver Routes */}
@@ -204,19 +145,10 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<DriverDashboard />}
-        />
+        <Route path='dashboard' element={<DriverDashboard />} />
         <Route path='trips' element={<MyTrips />} />
-        <Route
-          path='reports'
-          element={<TripReports />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='reports' element={<TripReports />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
       {/* Finance Routes */}
@@ -227,30 +159,12 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<AdminDashboard />}
-        />
-        <Route
-          path='payments'
-          element={<PaymentManagement />}
-        />
-        <Route
-          path='invoices'
-          element={<InvoiceManagement />}
-        />
-        <Route
-          path='reports'
-          element={<FinancialReports />}
-        />
-        <Route
-          path='messages'
-          element={<CentralizedMessages />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='dashboard' element={<AdminDashboard />} />
+        <Route path='payments' element={<PaymentManagement />} />
+        <Route path='invoices' element={<InvoiceManagement />} />
+        <Route path='reports' element={<FinancialReports />} />
+        <Route path='messages' element={<CentralizedMessages />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
       {/* Customer Service Routes */}
@@ -261,29 +175,17 @@ const AppRoutes: React.FC = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
-        <Route
-          path='dashboard'
-          element={<AdminDashboard />}
-        />
-        <Route
-          path='messages'
-          element={<CentralizedMessages />}
-        />
-        <Route
-          path='tickets'
-          element={<SupportTickets />}
-        />
-        <Route
-          path='faq'
-          element={<FAQManagement />}
-        />
-        <Route
-          path='attendance'
-          element={<AttendanceManagement />}
-        />
+        <Route path='dashboard' element={<AdminDashboard />} />
+        <Route path='messages' element={<CentralizedMessages />} />
+        <Route path='tickets' element={<SupportTickets />} />
+        <Route path='faq' element={<FAQManagement />} />
+        <Route path='attendance' element={<AttendanceManagement />} />
       </Route>
 
-      <Route path='*' element={user ? <NotFound /> : <Navigate to="/login" replace />} />
+      <Route
+        path='*'
+        element={user ? <NotFound /> : <Navigate to='/login' replace />}
+      />
     </Routes>
   );
 };
