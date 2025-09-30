@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import AddBookingModal from "@/components/forms/AddBookingModal";
+import ViewBookingDetails from "@/components/booking/ViewBookingDetailsModal";
+import EditBookingDialog from "@/components/booking/EditBookingModal";
+import ProcessPaymentDialog from "@/components/booking/ProcessPaymentModal";
 import {
   Table,
   TableBody,
@@ -82,6 +85,12 @@ const BookingManagement: React.FC = () => {
     paidRevenue: 0,
   });
 
+  // Dialog states
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+
   // Fetch bookings on mount
   useEffect(() => {
     fetchBookings();
@@ -135,6 +144,21 @@ const BookingManagement: React.FC = () => {
   const handleBookingSuccess = () => {
     fetchBookings();
     fetchStats();
+  };
+
+  const handleViewDetails = (booking: any) => {
+    setSelectedBooking(booking);
+    setViewDialogOpen(true);
+  };
+
+  const handleEditBooking = (booking: any) => {
+    setSelectedBooking(booking);
+    setEditDialogOpen(true);
+  };
+
+  const handleProcessPayment = (booking: any) => {
+    setSelectedBooking(booking);
+    setPaymentDialogOpen(true);
   };
 
   const filteredBookings = bookings.filter((booking) => {
@@ -475,15 +499,18 @@ const BookingManagement: React.FC = () => {
                           <DropdownMenuContent
                             align='end'
                             className='bg-popover z-50'>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleViewDetails(booking)}>
                               <Eye className='mr-2 h-4 w-4' />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditBooking(booking)}>
                               <Edit className='mr-2 h-4 w-4' />
                               Edit Booking
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleProcessPayment(booking)}>
                               <DollarSign className='mr-2 h-4 w-4' />
                               Process Payment
                             </DropdownMenuItem>
@@ -503,6 +530,29 @@ const BookingManagement: React.FC = () => {
       <AddBookingModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
+        onSuccess={handleBookingSuccess}
+      />
+
+      {/* View Booking Details Dialog */}
+      <ViewBookingDetails
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        booking={selectedBooking}
+      />
+
+      {/* Edit Booking Dialog */}
+      <EditBookingDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        booking={selectedBooking}
+        onSuccess={handleBookingSuccess}
+      />
+
+      {/* Process Payment Dialog */}
+      <ProcessPaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        booking={selectedBooking}
         onSuccess={handleBookingSuccess}
       />
     </div>
