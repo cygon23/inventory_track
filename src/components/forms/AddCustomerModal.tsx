@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CustomerInput } from "@/lib/customerService";
 
 // Country libs
 import countries from "i18n-iso-countries";
@@ -29,26 +30,10 @@ import {
 
 countries.registerLocale(enLocale);
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  totalBookings: number;
-  totalSpent: string;
-  lastBooking: string | null;
-  status: string;
-  rating: number | null;
-  joinDate: string;
-  preferences: string[];
-  upcomingTrip: string | null;
-}
-
 interface AddCustomerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddCustomer: (customer: Customer) => void;
+  onAddCustomer: (customer: CustomerInput) => void;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
@@ -65,8 +50,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     country: "",
     preferences: [] as string[],
     status: "new",
-    totalSpent: "$0",
-    upcomingTrip: "",
+    total_spent: "$0",
+    upcoming_trip: "",
   });
 
   const [currentPreference, setCurrentPreference] = useState("");
@@ -105,10 +90,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     "inactive",
   ];
 
-  const generateCustomerId = () => {
-    return `C${String(Math.floor(Math.random() * 900) + 100)}`;
-  };
-
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -142,29 +123,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       return;
     }
 
-    const newCustomer: Customer = {
-      id: generateCustomerId(),
+    // Create CustomerInput object for Supabase
+    const newCustomer: CustomerInput = {
       name: `${formData.firstName} ${formData.lastName}`,
       email: formData.email,
       phone: formData.phone,
       country: formData.country,
-      totalBookings: 0,
-      totalSpent: formData.totalSpent,
-      lastBooking: null,
       status: formData.status,
-      rating: null,
-      joinDate: new Date().toISOString().split("T")[0],
+      total_spent: formData.total_spent,
+      upcoming_trip: formData.upcoming_trip || null,
       preferences: formData.preferences,
-      upcomingTrip: formData.upcomingTrip || null,
     };
 
+    // Call the parent handler (which will call the Supabase service)
     onAddCustomer(newCustomer);
 
-    toast({
-      title: "Customer Added",
-      description: `${formData.firstName} ${formData.lastName} has been added successfully.`,
-    });
-
+    // Reset form
     setFormData({
       firstName: "",
       lastName: "",
@@ -173,13 +147,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       country: "",
       preferences: [],
       status: "new",
-      totalSpent: "$0",
-      upcomingTrip: "",
+      total_spent: "$0",
+      upcoming_trip: "",
     });
-    onOpenChange(false);
   };
 
-  // ✅ Utility to get flag emoji from ISO code
+  // Utility to get flag emoji from ISO code
   const getFlagEmoji = (countryCode: string) =>
     countryCode
       .toUpperCase()
@@ -193,7 +166,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
           <DialogDescription>
-            Create a new customer profile with contact details and preferences.
+            Create a new customer profile. A unique LT-XXXX ID will be generated
+            automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -298,23 +272,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             <h3 className='text-lg font-semibold'>Business Information</h3>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label htmlFor='totalSpent'>Total Spent</Label>
+                <Label htmlFor='total_spent'>Total Spent</Label>
                 <Input
-                  id='totalSpent'
-                  value={formData.totalSpent}
+                  id='total_spent'
+                  value={formData.total_spent}
                   onChange={(e) =>
-                    handleInputChange("totalSpent", e.target.value)
+                    handleInputChange("total_spent", e.target.value)
                   }
                   placeholder='$0'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='upcomingTrip'>Upcoming Trip</Label>
+                <Label htmlFor='upcoming_trip'>Upcoming Trip</Label>
                 <Input
-                  id='upcomingTrip'
-                  value={formData.upcomingTrip}
+                  id='upcoming_trip'
+                  value={formData.upcoming_trip}
                   onChange={(e) =>
-                    handleInputChange("upcomingTrip", e.target.value)
+                    handleInputChange("upcoming_trip", e.target.value)
                   }
                   placeholder='e.g., 3-Day Serengeti Explorer'
                 />
