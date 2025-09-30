@@ -1,258 +1,313 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User as SupabaseUser, Session } from '@supabase/supabase-js'
-import { supabase, User } from '@/lib/supabase'
-import { toast } from 'sonner'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { supabase, User } from "@/lib/supabase";
+import { toast } from "sonner";
 
 // Auth context types
 interface AuthContextType {
-  user: User | null
-  supabaseUser: SupabaseUser | null
-  session: Session | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  signOut: () => Promise<void>
-  updateUserProfile: (updates: Partial<User>) => Promise<{ success: boolean; error?: string }>
-  refreshUser: () => Promise<void>
+  user: User | null;
+  supabaseUser: SupabaseUser | null;
+  session: Session | null;
+  loading: boolean;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  updateUserProfile: (
+    updates: Partial<User>
+  ) => Promise<{ success: boolean; error?: string }>;
+  refreshUser: () => Promise<void>;
 }
 
 // Create context
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
 interface AuthProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch user profile from database
   const fetchUserProfile = async (userId: string): Promise<User | null> => {
     try {
       const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error)
-        return null
+        console.error("Error fetching user profile:", error);
+        return null;
       }
 
-      return data
+      return data;
     } catch (error) {
-      console.error('Error fetching user profile:', error)
-      return null
+      console.error("Error fetching user profile:", error);
+      return null;
     }
-  }
+  };
 
   // Create a user profile automatically when it does not exist
-  const provisionUserProfile = async (sbUser: SupabaseUser): Promise<User | null> => {
+  const provisionUserProfile = async (
+    sbUser: SupabaseUser
+  ): Promise<User | null> => {
     try {
-      console.log('AuthContext: Provisioning user profile for', sbUser.id)
-      const nowIso = new Date().toISOString()
+      console.log("AuthContext: Provisioning user profile for", sbUser.id);
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .insert({
           id: sbUser.id,
-          name: sbUser.email?.split('@')[0] || 'New User',
-          email: sbUser.email || '',
-          role: 'admin',
+          name: sbUser.email?.split("@")[0] || "New User",
+          email: sbUser.email || "",
+          role: "admin",
           avatar: null,
           is_active: true,
           last_login: nowIso,
-          permissions: ['all'],
+          permissions: ["all"],
           assigned_region: null,
           phone: null,
           created_at: nowIso,
           updated_at: nowIso,
         })
         .select()
-        .single()
+        .single();
 
       if (error) {
-        console.error('Error provisioning user profile:', error)
-        return null
+        console.error("Error provisioning user profile:", error);
+        return null;
       }
 
-      return data
+      return data;
     } catch (error) {
-      console.error('Error provisioning user profile:', error)
-      return null
+      console.error("Error provisioning user profile:", error);
+      return null;
     }
-  }
+  };
 
   const updateLastLogin = async (userId: string) => {
     try {
       await supabase
-        .from('users')
+        .from("users")
         .update({ last_login: new Date().toISOString() })
-        .eq('id', userId)
+        .eq("id", userId);
     } catch (error) {
-      console.error('Error updating last login:', error)
+      console.error("Error updating last login:", error);
     }
-  }
+  };
 
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
-      setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) return { success: false, error: error.message }
-      if (!data.user) return { success: false, error: 'No user data returned' }
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) return { success: false, error: error.message };
+      if (!data.user) return { success: false, error: "No user data returned" };
 
-      let userProfile = await fetchUserProfile(data.user.id)
+      let userProfile = await fetchUserProfile(data.user.id);
       if (!userProfile) {
-        userProfile = await provisionUserProfile(data.user)
+        userProfile = await provisionUserProfile(data.user);
         if (!userProfile) {
-          await supabase.auth.signOut()
-          return { success: false, error: 'User profile could not be created. Please contact administrator.' }
+          await supabase.auth.signOut();
+          return {
+            success: false,
+            error:
+              "User profile could not be created. Please contact administrator.",
+          };
         }
       }
 
       if (!userProfile.is_active) {
-        await supabase.auth.signOut()
-        return { success: false, error: 'Account is deactivated. Please contact administrator.' }
+        await supabase.auth.signOut();
+        return {
+          success: false,
+          error: "Account is deactivated. Please contact administrator.",
+        };
       }
 
-      await updateLastLogin(data.user.id)
-      setUser(userProfile)
-      setSupabaseUser(data.user)
-      setSession(data.session)
-      return { success: true }
+      await updateLastLogin(data.user.id);
+      setUser(userProfile);
+      setSupabaseUser(data.user);
+      setSession(data.session);
+      return { success: true };
     } catch (error) {
-      console.error('Sign in error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error("Sign in error:", error);
+      return { success: false, error: "An unexpected error occurred" };
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const signOut = async (): Promise<void> => {
     try {
-      setLoading(true)
-      await supabase.auth.signOut()
-      setUser(null)
-      setSupabaseUser(null)
-      setSession(null)
+      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setSupabaseUser(null);
+      setSession(null);
     } catch (error) {
-      console.error('Sign out error:', error)
-      toast.error('Error signing out')
+      console.error("Sign out error:", error);
+      toast.error("Error signing out");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const updateUserProfile = async (updates: Partial<User>): Promise<{ success: boolean; error?: string }> => {
-    if (!user) return { success: false, error: 'No user logged in' }
+  const updateUserProfile = async (
+    updates: Partial<User>
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: "No user logged in" };
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .update(updates)
-        .eq('id', user.id)
+        .eq("id", user.id)
         .select()
-        .single()
-      if (error) return { success: false, error: error.message }
-      setUser(data)
-      return { success: true }
+        .single();
+      if (error) return { success: false, error: error.message };
+      setUser(data);
+      return { success: true };
     } catch (error) {
-      console.error('Update profile error:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      console.error("Update profile error:", error);
+      return { success: false, error: "An unexpected error occurred" };
     }
-  }
+  };
 
   const refreshUser = async (): Promise<void> => {
-    if (!supabaseUser) return
+    if (!supabaseUser) return;
     try {
-      const userProfile = await fetchUserProfile(supabaseUser.id)
-      if (userProfile) setUser(userProfile)
+      const userProfile = await fetchUserProfile(supabaseUser.id);
+      if (userProfile) setUser(userProfile);
     } catch (error) {
-      console.error('Error refreshing user:', error)
+      console.error("Error refreshing user:", error);
     }
-  }
+  };
 
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
 
-    const getInitialSession = async () => {
+    const initAuth = async () => {
       try {
-        console.log('AuthContext: Getting initial session...')
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('AuthContext: Error getting session:', error)
-        }
-        console.log('AuthContext: getSession result =>', { hasSession: !!session, userId: session?.user?.id })
+        console.log("AuthContext: Getting initial session...");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        if (session?.user && mounted) {
-          setSupabaseUser(session.user)
-          setSession(session)
+        if (!mounted) return;
 
-          let userProfile = await fetchUserProfile(session.user.id)
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setSession(session);
+
+          let userProfile = await fetchUserProfile(session.user.id);
           if (!userProfile) {
-            userProfile = await provisionUserProfile(session.user)
+            userProfile = await provisionUserProfile(session.user);
           }
-          if (userProfile && userProfile.is_active) {
-            setUser(userProfile)
+
+          if (userProfile?.is_active) {
+            setUser(userProfile);
+            updateLastLogin(session.user.id).catch(console.error);
           } else {
-            setUser(null)
-            await supabase.auth.signOut()
+            setUser(null);
+            console.warn("User profile inactive or missing on initAuth");
           }
+        } else {
+          setUser(null);
         }
       } catch (err) {
-        console.error('Error initializing auth:', err)
-        setUser(null)
+        console.error("Error initializing auth:", err);
+        setUser(null);
       } finally {
+        // CRITICAL FIX: Always set loading to false, even if there's an error
         if (mounted) {
-          console.log('AuthContext: Initializing complete, setting loading=false')
-          setLoading(false)
+          console.log("AuthContext: Initial auth check complete");
+          setLoading(false);
         }
       }
-    }
+    };
 
-    getInitialSession()
+    initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('AuthContext: onAuthStateChange', { event, hasSession: !!session })
-        if (!mounted) return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AuthContext: onAuthStateChange", {
+        event,
+        hasSession: !!session,
+      });
 
-        setSupabaseUser(session?.user ?? null)
-        setSession(session)
+      if (!mounted) return;
 
-        try {
-          if (session?.user) {
-            let userProfile = await fetchUserProfile(session.user.id)
-            if (!userProfile) {
-              userProfile = await provisionUserProfile(session.user)
-            }
-            if (userProfile && userProfile.is_active) {
-              setUser(userProfile)
-              await updateLastLogin(session.user.id)
-            } else {
-              setUser(null)
-              await supabase.auth.signOut()
-              toast.error('Account not found or deactivated')
-            }
-          } else {
-            setUser(null)
-          }
-        } catch (err) {
-          console.error('Auth state change error:', err)
-          setUser(null)
-        } finally {
-          setLoading(false)
+      // Set a timeout to ensure loading never stays true indefinitely
+      const timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn("Auth state change timeout - forcing loading to false");
+          setLoading(false);
+        }
+      }, 5000); // 5 second timeout
+
+      try {
+        setSupabaseUser(session?.user ?? null);
+        setSession(session ?? null);
+
+        if (!session?.user) {
+          setUser(null);
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        // Only set loading true if we're actually fetching user data
+        setLoading(true);
+
+        let userProfile = await fetchUserProfile(session.user.id);
+        if (!userProfile) {
+          userProfile = await provisionUserProfile(session.user);
+        }
+
+        if (userProfile?.is_active) {
+          setUser(userProfile);
+          updateLastLogin(session.user.id).catch(console.error);
+        } else {
+          setUser(null);
+          console.warn("User profile inactive or missing onAuthStateChange");
+        }
+      } catch (err) {
+        console.error("Auth state change error:", err);
+        setUser(null);
+      } finally {
+        clearTimeout(timeoutId);
+        if (mounted) {
+          console.log("AuthContext: Auth state change complete");
+          setLoading(false);
         }
       }
-    )
+    });
 
     return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [])
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const value: AuthContextType = {
     user,
@@ -263,39 +318,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     updateUserProfile,
     refreshUser,
-  }
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within an AuthProvider')
-  return context
-}
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
+};
 
 export const useRole = () => {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const hasRole = (role: string) => user?.role === role
-  const hasAnyRole = (roles: string[]) => !user ? false : user.role === 'super_admin' || roles.includes(user.role)
-  
-  const isSuperAdmin = () => hasRole('super_admin')
-  const isAdmin = () => hasRole('admin')
-  const isBookingManager = () => hasRole('booking_manager')
-  const isOperationsCoordinator = () => hasRole('operations_coordinator')
-  const isDriver = () => hasRole('driver')
-  const isFinanceOfficer = () => hasRole('finance_officer')
-  const isCustomerService = () => hasRole('customer_service')
+  const hasRole = (role: string) => user?.role === role;
+  const hasAnyRole = (roles: string[]) =>
+    !user ? false : user.role === "super_admin" || roles.includes(user.role);
 
-  return { user, hasRole, hasAnyRole, isSuperAdmin, isAdmin, isBookingManager, isOperationsCoordinator, isDriver, isFinanceOfficer, isCustomerService }
-}
+  const isSuperAdmin = () => hasRole("super_admin");
+  const isAdmin = () => hasRole("admin");
+  const isBookingManager = () => hasRole("booking_manager");
+  const isOperationsCoordinator = () => hasRole("operations_coordinator");
+  const isDriver = () => hasRole("driver");
+  const isFinanceOfficer = () => hasRole("finance_officer");
+  const isCustomerService = () => hasRole("customer_service");
+
+  return {
+    user,
+    hasRole,
+    hasAnyRole,
+    isSuperAdmin,
+    isAdmin,
+    isBookingManager,
+    isOperationsCoordinator,
+    isDriver,
+    isFinanceOfficer,
+    isCustomerService,
+  };
+};
 
 export const usePermissions = () => {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const hasPermission = (permission: string) => !user ? false : user.permissions.includes(permission) || user.permissions.includes('all')
-  const hasAnyPermission = (permissions: string[]) => !user ? false : user.role === 'super_admin' || permissions.some(p => user.permissions.includes(p) || user.permissions.includes('all'))
+  const hasPermission = (permission: string) =>
+    !user
+      ? false
+      : user.permissions.includes(permission) ||
+        user.permissions.includes("all");
+  const hasAnyPermission = (permissions: string[]) =>
+    !user
+      ? false
+      : user.role === "super_admin" ||
+        permissions.some(
+          (p) =>
+            user.permissions.includes(p) || user.permissions.includes("all")
+        );
 
-  return { hasPermission, hasAnyPermission, permissions: user?.permissions || [] }
-}
+  return {
+    hasPermission,
+    hasAnyPermission,
+    permissions: user?.permissions || [],
+  };
+};
