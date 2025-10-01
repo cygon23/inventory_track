@@ -80,32 +80,32 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">
+        <h1 className='text-3xl font-bold text-foreground'>
           Welcome back, {currentUser.name}
         </h1>
-        <p className="text-muted-foreground">
-          Here's an overview of your safari business operations
+        <p className='text-muted-foreground'>
+          Here's an overview of your safari business operations..
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="safari-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+            <Card key={index} className='safari-card'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className='text-sm font-medium text-muted-foreground'>
                       {stat.title}
                     </p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                      <TrendingUp className="h-3 w-3 mr-1" />
+                    <p className='text-2xl font-bold'>{stat.value}</p>
+                    <p className='text-xs text-muted-foreground flex items-center'>
+                      <TrendingUp className='h-3 w-3 mr-1' />
                       {stat.change} from last month
                     </p>
                   </div>
@@ -117,34 +117,40 @@ const AdminDashboard: React.FC = () => {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Recent Bookings */}
-        <Card className="safari-card">
+        <Card className='safari-card'>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className='flex items-center justify-between'>
               Recent Bookings
-              <Button variant="outline" size="sm">View All</Button>
+              <Button variant='outline' size='sm'>
+                View All
+              </Button>
             </CardTitle>
             <CardDescription>Latest booking activity</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className='space-y-4'>
               {recentBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
+                <div
+                  key={booking.id}
+                  className='flex items-center justify-between p-3 border border-border rounded-lg'>
+                  <div className='flex items-center space-x-3'>
+                    <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
+                      <Calendar className='h-5 w-5 text-primary' />
                     </div>
                     <div>
-                      <p className="font-medium">{booking.customer}</p>
-                      <p className="text-sm text-muted-foreground">{booking.package}</p>
+                      <p className='font-medium'>{booking.customer}</p>
+                      <p className='text-sm text-muted-foreground'>
+                        {booking.package}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className='text-right'>
                     <Badge className={getStatusColor(booking.status)}>
                       {booking.status}
                     </Badge>
-                    <p className="text-sm font-medium mt-1">{booking.amount}</p>
+                    <p className='text-sm font-medium mt-1'>{booking.amount}</p>
                   </div>
                 </div>
               ))}
@@ -153,37 +159,45 @@ const AdminDashboard: React.FC = () => {
         </Card>
 
         {/* Urgent Messages */}
-        <Card className="safari-card">
+        <Card className='safari-card'>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2 text-orange-500" />
+            <CardTitle className='flex items-center justify-between'>
+              <span className='flex items-center'>
+                <AlertTriangle className='h-5 w-5 mr-2 text-orange-500' />
                 Urgent Messages
               </span>
-              <Button variant="outline" size="sm">View All</Button>
+              <Button variant='outline' size='sm'>
+                View All
+              </Button>
             </CardTitle>
-            <CardDescription>Messages requiring immediate attention</CardDescription>
+            <CardDescription>
+              Messages requiring immediate attention
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className='space-y-4'>
               {urgentMessages.map((message) => (
-                <div key={message.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-red-600" />
+                <div
+                  key={message.id}
+                  className='flex items-center justify-between p-3 border border-border rounded-lg'>
+                  <div className='flex items-center space-x-3'>
+                    <div className='w-10 h-10 bg-red-50 rounded-full flex items-center justify-center'>
+                      <MessageSquare className='h-5 w-5 text-red-600' />
                     </div>
                     <div>
-                      <p className="font-medium">{message.customer}</p>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        {message.type.replace('_', ' ')}
+                      <p className='font-medium'>{message.customer}</p>
+                      <p className='text-sm text-muted-foreground capitalize'>
+                        {message.type.replace("_", " ")}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className='text-right'>
                     <Badge className={getPriorityColor(message.priority)}>
                       {message.priority}
                     </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{message.time}</p>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      {message.time}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -193,40 +207,46 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Performance Overview */}
-      <Card className="safari-card">
+      <Card className='safari-card'>
         <CardHeader>
           <CardTitle>Performance Overview</CardTitle>
           <CardDescription>Key metrics for this month</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            <div className='flex items-center space-x-3'>
+              <div className='w-12 h-12 bg-green-100 rounded-full flex items-center justify-center'>
+                <CheckCircle className='h-6 w-6 text-green-600' />
               </div>
               <div>
-                <p className="text-2xl font-bold">94%</p>
-                <p className="text-sm text-muted-foreground">Customer Satisfaction</p>
+                <p className='text-2xl font-bold'>94%</p>
+                <p className='text-sm text-muted-foreground'>
+                  Customer Satisfaction
+                </p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Clock className="h-6 w-6 text-blue-600" />
+
+            <div className='flex items-center space-x-3'>
+              <div className='w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center'>
+                <Clock className='h-6 w-6 text-blue-600' />
               </div>
               <div>
-                <p className="text-2xl font-bold">2.3h</p>
-                <p className="text-sm text-muted-foreground">Avg Response Time</p>
+                <p className='text-2xl font-bold'>2.3h</p>
+                <p className='text-sm text-muted-foreground'>
+                  Avg Response Time
+                </p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-yellow-600" />
+
+            <div className='flex items-center space-x-3'>
+              <div className='w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center'>
+                <TrendingUp className='h-6 w-6 text-yellow-600' />
               </div>
               <div>
-                <p className="text-2xl font-bold">87%</p>
-                <p className="text-sm text-muted-foreground">Booking Conversion</p>
+                <p className='text-2xl font-bold'>87%</p>
+                <p className='text-sm text-muted-foreground'>
+                  Booking Conversion
+                </p>
               </div>
             </div>
           </div>

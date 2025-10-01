@@ -187,7 +187,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
     return prefixMap[role] || 'admin';
   }
 
-  const userPermissions = rolePermissionsConst[currentUser.role] || [];
+ const userPermissions = currentUser.permissions || [];
   const visibleMenuItems = allMenuItems.filter(item => {
     if (currentUser.role === 'super_admin') return true;
     return userPermissions.includes(item.permission);
