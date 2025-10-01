@@ -21,6 +21,7 @@ import {
   Users
 } from 'lucide-react';
 import { User } from '@/data/mockUsers';
+import AddVehicleDialog from '../modals/AddVehicleDialog';
 
 interface VehicleManagementProps {
   currentUser: User;
@@ -29,6 +30,7 @@ interface VehicleManagementProps {
 const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
 
   const vehicles = [
     {
@@ -266,31 +268,41 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
   });
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+      <div className='flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0'>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Vehicle Management</h1>
-          <p className="text-muted-foreground">Monitor fleet status, maintenance, and availability</p>
+          <h1 className='text-2xl md:text-3xl font-bold text-foreground'>
+            Vehicle Management
+          </h1>
+          <p className='text-muted-foreground'>
+            Monitor fleet status, maintenance, and availability
+          </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={() => setIsAddVehicleOpen(true)}>
+          <Plus className='h-4 w-4 mr-2' />
           Add Vehicle
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="safari-card">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-xl md:text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.change}</p>
+            <Card key={index} className='safari-card'>
+              <CardContent className='p-4 md:p-6'>
+                <div className='flex items-center justify-between'>
+                  <div className='space-y-1'>
+                    <p className='text-sm font-medium text-muted-foreground'>
+                      {stat.title}
+                    </p>
+                    <p className='text-xl md:text-2xl font-bold'>
+                      {stat.value}
+                    </p>
+                    <p className='text-xs text-muted-foreground'>
+                      {stat.change}
+                    </p>
                   </div>
                   <Icon className={`h-6 w-6 md:h-8 md:w-8 ${stat.color}`} />
                 </div>
@@ -301,45 +313,41 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
       </div>
 
       {/* Filters and Search */}
-      <Card className="safari-card">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Card className='safari-card'>
+        <CardContent className='p-4 md:p-6'>
+          <div className='flex flex-col sm:flex-row gap-4'>
+            <div className='relative flex-1'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
               <Input
-                placeholder="Search vehicles by model, plate, or driver..."
+                placeholder='Search vehicles by model, plate, or driver...'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className='pl-10'
               />
             </div>
-            <div className="flex space-x-2">
-              <Button 
-                variant={filterStatus === 'all' ? 'default' : 'outline'} 
-                onClick={() => setFilterStatus('all')}
-                size="sm"
-              >
+            <div className='flex space-x-2'>
+              <Button
+                variant={filterStatus === "all" ? "default" : "outline"}
+                onClick={() => setFilterStatus("all")}
+                size='sm'>
                 All
               </Button>
-              <Button 
-                variant={filterStatus === 'available' ? 'default' : 'outline'} 
-                onClick={() => setFilterStatus('available')}
-                size="sm"
-              >
+              <Button
+                variant={filterStatus === "available" ? "default" : "outline"}
+                onClick={() => setFilterStatus("available")}
+                size='sm'>
                 Available
               </Button>
-              <Button 
-                variant={filterStatus === 'on_trip' ? 'default' : 'outline'} 
-                onClick={() => setFilterStatus('on_trip')}
-                size="sm"
-              >
+              <Button
+                variant={filterStatus === "on_trip" ? "default" : "outline"}
+                onClick={() => setFilterStatus("on_trip")}
+                size='sm'>
                 On Trip
               </Button>
-              <Button 
-                variant={filterStatus === 'maintenance' ? 'default' : 'outline'} 
-                onClick={() => setFilterStatus('maintenance')}
-                size="sm"
-              >
+              <Button
+                variant={filterStatus === "maintenance" ? "default" : "outline"}
+                onClick={() => setFilterStatus("maintenance")}
+                size='sm'>
                 Maintenance
               </Button>
             </div>
@@ -348,93 +356,117 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
       </Card>
 
       {/* Vehicle Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {filteredVehicles.map((vehicle) => (
-          <Card key={vehicle.id} className="safari-card">
+          <Card key={vehicle.id} className='safari-card'>
             <CardHeader>
-              <div className="flex items-start justify-between">
+              <div className='flex items-start justify-between'>
                 <div>
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <Car className="h-5 w-5" />
-                    <span>{vehicle.model} ({vehicle.year})</span>
+                  <CardTitle className='text-lg flex items-center space-x-2'>
+                    <Car className='h-5 w-5' />
+                    <span>
+                      {vehicle.model} ({vehicle.year})
+                    </span>
                   </CardTitle>
-                  <CardDescription className="flex items-center space-x-4">
+                  <CardDescription className='flex items-center space-x-4'>
                     <span>Plate: {vehicle.plate}</span>
                     <span>ID: {vehicle.id}</span>
                   </CardDescription>
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className='flex items-center space-x-2 mt-2'>
                     <Badge className={getStatusColor(vehicle.status)}>
                       {formatStatus(vehicle.status)}
                     </Badge>
-                    <span className={`text-sm font-medium ${getConditionColor(vehicle.condition)}`}>
-                      {vehicle.condition.charAt(0).toUpperCase() + vehicle.condition.slice(1)}
+                    <span
+                      className={`text-sm font-medium ${getConditionColor(
+                        vehicle.condition
+                      )}`}>
+                      {vehicle.condition.charAt(0).toUpperCase() +
+                        vehicle.condition.slice(1)}
                     </span>
                   </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className='space-y-4'>
               {/* Current Assignment */}
               {vehicle.currentTrip ? (
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <div className="flex items-center justify-between">
+                <div className='bg-primary/10 p-3 rounded-lg'>
+                  <div className='flex items-center justify-between'>
                     <div>
-                      <p className="font-medium text-sm">Current Assignment</p>
-                      <p className="text-sm text-muted-foreground">Trip #{vehicle.currentTrip.id}</p>
-                      <p className="text-sm">{vehicle.currentTrip.customer}</p>
+                      <p className='font-medium text-sm'>Current Assignment</p>
+                      <p className='text-sm text-muted-foreground'>
+                        Trip #{vehicle.currentTrip.id}
+                      </p>
+                      <p className='text-sm'>{vehicle.currentTrip.customer}</p>
                     </div>
-                    <div className="text-right text-sm">
-                      <p className="font-medium">Driver: {vehicle.driver}</p>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{vehicle.currentTrip.location}</span>
+                    <div className='text-right text-sm'>
+                      <p className='font-medium'>Driver: {vehicle.driver}</p>
+                      <div className='flex items-center space-x-1'>
+                        <MapPin className='h-3 w-3 text-muted-foreground' />
+                        <span className='text-muted-foreground'>
+                          {vehicle.currentTrip.location}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">Until {vehicle.currentTrip.endDate}</p>
+                      <p className='text-xs text-muted-foreground'>
+                        Until {vehicle.currentTrip.endDate}
+                      </p>
                     </div>
                   </div>
                 </div>
-              ) : vehicle.status === 'available' ? (
-                <div className="bg-success/10 p-3 rounded-lg">
-                  <p className="font-medium text-success">Available for Assignment</p>
-                  <p className="text-xs text-muted-foreground">Ready for immediate deployment</p>
+              ) : vehicle.status === "available" ? (
+                <div className='bg-success/10 p-3 rounded-lg'>
+                  <p className='font-medium text-success'>
+                    Available for Assignment
+                  </p>
+                  <p className='text-xs text-muted-foreground'>
+                    Ready for immediate deployment
+                  </p>
                 </div>
-              ) : vehicle.status === 'maintenance' ? (
-                <div className="bg-warning/10 p-3 rounded-lg">
-                  <p className="font-medium text-warning">Under Maintenance</p>
-                  <p className="text-xs text-muted-foreground">Service completion: {vehicle.nextService}</p>
+              ) : vehicle.status === "maintenance" ? (
+                <div className='bg-warning/10 p-3 rounded-lg'>
+                  <p className='font-medium text-warning'>Under Maintenance</p>
+                  <p className='text-xs text-muted-foreground'>
+                    Service completion: {vehicle.nextService}
+                  </p>
                 </div>
               ) : null}
 
               {/* Vehicle Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='space-y-3'>
                   <div>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className='flex items-center justify-between text-sm'>
                       <span>Fuel Level</span>
-                      <span className={getFuelLevelColor(vehicle.fuelLevel)}>{vehicle.fuelLevel}%</span>
+                      <span className={getFuelLevelColor(vehicle.fuelLevel)}>
+                        {vehicle.fuelLevel}%
+                      </span>
                     </div>
-                    <Progress value={vehicle.fuelLevel} className="h-2 mt-1" />
+                    <Progress value={vehicle.fuelLevel} className='h-2 mt-1' />
                   </div>
-                  
-                  <div className="text-sm">
-                    <p className="font-medium">Mileage</p>
-                    <p className="text-muted-foreground">{vehicle.mileage.toLocaleString()} km</p>
+
+                  <div className='text-sm'>
+                    <p className='font-medium'>Mileage</p>
+                    <p className='text-muted-foreground'>
+                      {vehicle.mileage.toLocaleString()} km
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="text-sm">
-                    <p className="font-medium">Capacity</p>
-                    <div className="flex items-center space-x-1">
-                      <Users className="h-3 w-3 text-muted-foreground" />
+                <div className='space-y-3'>
+                  <div className='text-sm'>
+                    <p className='font-medium'>Capacity</p>
+                    <div className='flex items-center space-x-1'>
+                      <Users className='h-3 w-3 text-muted-foreground' />
                       <span>{vehicle.capacity} passengers</span>
                     </div>
                   </div>
-                  
-                  <div className="text-sm">
-                    <p className="font-medium">Service Due</p>
+
+                  <div className='text-sm'>
+                    <p className='font-medium'>Service Due</p>
                     <p className={`${getServiceDueColor(vehicle.serviceDue)}`}>
-                      {vehicle.serviceDue > 0 ? `${vehicle.serviceDue} days` : 'Overdue'}
+                      {vehicle.serviceDue > 0
+                        ? `${vehicle.serviceDue} days`
+                        : "Overdue"}
                     </p>
                   </div>
                 </div>
@@ -442,10 +474,10 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
 
               {/* Features */}
               <div>
-                <p className="font-medium text-sm mb-2">Features</p>
-                <div className="flex flex-wrap gap-1">
+                <p className='font-medium text-sm mb-2'>Features</p>
+                <div className='flex flex-wrap gap-1'>
                   {vehicle.features.map((feature, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
+                    <Badge key={index} variant='outline' className='text-xs'>
                       {feature}
                     </Badge>
                   ))}
@@ -454,16 +486,22 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
 
               {/* Issues */}
               {vehicle.issues.length > 0 && (
-                <div className="bg-destructive/10 p-3 rounded-lg">
-                  <p className="font-medium text-destructive text-sm mb-2">Active Issues</p>
-                  <div className="space-y-1">
+                <div className='bg-destructive/10 p-3 rounded-lg'>
+                  <p className='font-medium text-destructive text-sm mb-2'>
+                    Active Issues
+                  </p>
+                  <div className='space-y-1'>
                     {vehicle.issues.map((issue, index) => (
-                      <div key={index} className="text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="destructive" className="text-xs">{issue.type}</Badge>
-                          <span className="text-muted-foreground text-xs">Reported: {issue.reported}</span>
+                      <div key={index} className='text-sm'>
+                        <div className='flex items-center space-x-2'>
+                          <Badge variant='destructive' className='text-xs'>
+                            {issue.type}
+                          </Badge>
+                          <span className='text-muted-foreground text-xs'>
+                            Reported: {issue.reported}
+                          </span>
                         </div>
-                        <p className="text-destructive">{issue.description}</p>
+                        <p className='text-destructive'>{issue.description}</p>
                       </div>
                     ))}
                   </div>
@@ -471,28 +509,39 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
               )}
 
               {/* Last Maintenance */}
-              <div className="text-sm">
-                <p className="font-medium">Last Service</p>
-                <p className="text-muted-foreground">{vehicle.lastService}</p>
+              <div className='text-sm'>
+                <p className='font-medium'>Last Service</p>
+                <p className='text-muted-foreground'>{vehicle.lastService}</p>
                 {vehicle.maintenance.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {vehicle.maintenance[0].type} - {vehicle.maintenance[0].cost}
+                  <p className='text-xs text-muted-foreground'>
+                    {vehicle.maintenance[0].type} -{" "}
+                    {vehicle.maintenance[0].cost}
                   </p>
                 )}
               </div>
 
+              {/* Last Maintenance */}
+              <AddVehicleDialog
+                open={isAddVehicleOpen}
+                onOpenChange={setIsAddVehicleOpen}
+                onSubmit={(data) => {
+                  console.log("New vehicle:", data);
+                  // TODO: save to DB or update state
+                }}
+              />
+
               {/* Actions */}
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Eye className="h-4 w-4 mr-1" />
+              <div className='flex space-x-2'>
+                <Button size='sm' variant='outline' className='flex-1'>
+                  <Eye className='h-4 w-4 mr-1' />
                   Details
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Settings className="h-4 w-4 mr-1" />
+                <Button size='sm' variant='outline' className='flex-1'>
+                  <Settings className='h-4 w-4 mr-1' />
                   Maintenance
                 </Button>
-                {vehicle.status === 'available' && (
-                  <Button size="sm" className="flex-1">
+                {vehicle.status === "available" && (
+                  <Button size='sm' className='flex-1'>
                     Assign
                   </Button>
                 )}
