@@ -35,3 +35,6 @@ dist-ssr
 .env.test.local.backup.4
 .env.test.local.backup.5
 .env.test.local.backup.6
+
+.vscode
+SETUP.md

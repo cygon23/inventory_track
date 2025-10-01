@@ -9,7 +9,6 @@ import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { supabase, User } from "@/lib/supabase";
 import { toast } from "sonner";
 
-// Auth context types
 interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
@@ -26,10 +25,8 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-// Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth provider component
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -40,7 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from database
   const fetchUserProfile = async (userId: string): Promise<User | null> => {
     try {
       const { data, error } = await supabase
@@ -61,7 +57,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Create a user profile automatically when it does not exist
   const provisionUserProfile = async (
     sbUser: SupabaseUser
   ): Promise<User | null> => {
@@ -204,6 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     let mounted = true;
+    let isInitializing = true;
 
     const initAuth = async () => {
       try {
@@ -237,15 +233,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error("Error initializing auth:", err);
         setUser(null);
       } finally {
-        // CRITICAL FIX: Always set loading to false, even if there's an error
         if (mounted) {
           console.log("AuthContext: Initial auth check complete");
+          isInitializing = false;
           setLoading(false);
         }
       }
     };
-
-    initAuth();
 
     const {
       data: { subscription },
@@ -253,17 +247,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log("AuthContext: onAuthStateChange", {
         event,
         hasSession: !!session,
+        isInitializing,
       });
 
       if (!mounted) return;
 
-      // Set a timeout to ensure loading never stays true indefinitely
+      if (isInitializing) {
+        console.log(
+          "AuthContext: Skipping event during initialization:",
+          event
+        );
+        return;
+      }
+
       const timeoutId = setTimeout(() => {
         if (mounted) {
           console.warn("Auth state change timeout - forcing loading to false");
           setLoading(false);
         }
-      }, 5000); // 5 second timeout
+      }, 10000);
 
       try {
         setSupabaseUser(session?.user ?? null);
@@ -276,7 +278,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Only set loading true if we're actually fetching user data
         setLoading(true);
 
         let userProfile = await fetchUserProfile(session.user.id);
@@ -302,6 +303,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     });
+
+    initAuth();
 
     return () => {
       mounted = false;
