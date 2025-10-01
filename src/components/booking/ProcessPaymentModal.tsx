@@ -28,12 +28,10 @@ import {
   Calendar,
   Receipt,
   AlertCircle,
-  Loader2,
-  Smartphone,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePaymentProcessing } from "@/hooks/usePaymentProcessing";
-import { supabase, User } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase"; 
 
 interface ProcessPaymentDialogProps {
   open: boolean;
@@ -54,15 +52,14 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
   const [paymentNotes, setPaymentNotes] = useState<string>("");
   const [mobileProvider, setMobileProvider] = useState<string>("m_pesa");
   const [paymentEvidence, setPaymentEvidence] = useState<File | null>(null);
-  const [paymentDate, setPaymentDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
 
   const { processPayment, isSubmitting, error, resetError } =
     usePaymentProcessing(supabase);
 
+
   useEffect(() => {
     if (booking && open) {
+      // Calculate remaining balance
       const remaining =
         (booking.total_amount || 0) - (booking.paid_amount || 0);
       setPaymentAmount(remaining > 0 ? remaining : 0);
@@ -71,10 +68,8 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
       setPaymentNotes("");
       setMobileProvider("m_pesa");
       setPaymentEvidence(null);
-      setPaymentDate(new Date().toISOString().split("T")[0]);
-      resetError();
     }
-  }, [booking, open, resetError]);
+  }, [booking, open]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -95,33 +90,36 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
     return (booking?.total_amount || 0) - getNewPaidAmount();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent) => {
+   e.preventDefault();
+   if (!booking) return;
 
-    const result = await processPayment({
-      bookingId: booking.id,
-      customerName: booking.customer_name,
-      amount: paymentAmount,
-      method: paymentMethod,
-      mobileProvider:
-        paymentMethod === "mobile_money" ? mobileProvider : undefined,
-      transactionReference: transactionReference || undefined,
-      notes: paymentNotes || undefined,
-      paymentDate,
-      evidenceFile: paymentEvidence,
-      totalAmount: booking.total_amount,
-      paidAmount: booking.paid_amount,
-      bookingReference: booking.booking_reference,
-      checkIn: booking.check_in,
-    });
+   const paymentData = {
+     bookingId: booking.id,
+     customerName: booking.customer_name,
+     amount: paymentAmount,
+     method: paymentMethod,
+     mobileProvider:
+       paymentMethod === "mobile_money" ? mobileProvider : undefined,
+     transactionReference,
+     notes: paymentNotes,
+     paymentDate: new Date().toISOString().split("T")[0],
+     evidenceFile: paymentEvidence,
+     totalAmount: booking.total_amount,
+     paidAmount: booking.paid_amount,
+     bookingReference: booking.booking_reference,
+   };
 
-    if (result.success) {
-      onOpenChange(false);
-      if (onSuccess) {
-        onSuccess();
-      }
-    }
-  };
+   const result = await processPayment(paymentData);
+
+   if (result.success) {
+     if (onSuccess) onSuccess(); // tell parent to refresh list
+     onOpenChange(false); // close dialog
+   } else {
+     console.error("Payment failed:", result.error);
+   }
+ };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -133,7 +131,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-2xl max-h-[90vh]'>
+      <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='text-2xl flex items-center gap-2'>
             <DollarSign className='h-6 w-6 text-primary' />
@@ -145,16 +143,8 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <ScrollArea className='max-h-[60vh] pr-4'>
+          <ScrollArea className='h-[60vh] pr-4 sm:h-[65vh]'>
             <div className='space-y-6'>
-              {/* Error Alert */}
-              {error && (
-                <Alert variant='destructive'>
-                  <AlertCircle className='h-4 w-4' />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               {/* Payment Summary Card */}
               <Card className='border-primary/20'>
                 <CardContent className='pt-6'>
@@ -193,6 +183,8 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                         {formatCurrency(getRemainingBalance())}
                       </span>
                     </div>
+
+                    {/* Payment Status Badge */}
                     <div className='pt-2'>
                       <Badge
                         variant={
@@ -229,7 +221,6 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     }
                     className='pl-10 text-lg font-semibold'
                     required
-                    disabled={isSubmitting}
                   />
                 </div>
                 <div className='flex justify-between text-sm'>
@@ -238,8 +229,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     variant='link'
                     size='sm'
                     className='h-auto p-0 text-primary'
-                    onClick={() => setPaymentAmount(getRemainingBalance() / 2)}
-                    disabled={isSubmitting}>
+                    onClick={() => setPaymentAmount(getRemainingBalance() / 2)}>
                     50% ({formatCurrency(getRemainingBalance() / 2)})
                   </Button>
                   <Button
@@ -247,8 +237,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     variant='link'
                     size='sm'
                     className='h-auto p-0 text-primary'
-                    onClick={() => setPaymentAmount(getRemainingBalance())}
-                    disabled={isSubmitting}>
+                    onClick={() => setPaymentAmount(getRemainingBalance())}>
                     Pay Full Balance
                   </Button>
                 </div>
@@ -261,10 +250,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                   className='text-base font-semibold'>
                   Payment Method <span className='text-destructive'>*</span>
                 </Label>
-                <Select
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                  disabled={isSubmitting}>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger className='h-12'>
                     <SelectValue />
                   </SelectTrigger>
@@ -301,7 +287,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     </SelectItem>
                     <SelectItem value='mobile_money'>
                       <div className='flex items-center gap-2'>
-                        <Smartphone className='h-4 w-4' />
+                        <CreditCard className='h-4 w-4' />
                         Mobile Money (Tanzania)
                       </div>
                     </SelectItem>
@@ -309,7 +295,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                 </Select>
               </div>
 
-              {/* Mobile Money Provider */}
+              {/* Mobile Money Provider - Only show if mobile_money is selected */}
               {paymentMethod === "mobile_money" && (
                 <div className='space-y-2'>
                   <Label
@@ -320,23 +306,40 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                   </Label>
                   <Select
                     value={mobileProvider}
-                    onValueChange={setMobileProvider}
-                    disabled={isSubmitting}>
+                    onValueChange={setMobileProvider}>
                     <SelectTrigger className='h-12'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className='bg-popover z-50'>
-                      <SelectItem value='m_pesa'>M-Pesa (Vodacom)</SelectItem>
-                      <SelectItem value='airtel_money'>Airtel Money</SelectItem>
-                      <SelectItem value='tigopesa'>Tigopesa (Tigo)</SelectItem>
-                      <SelectItem value='halopesa'>
-                        Halopesa (Halotel)
+                      <SelectItem value='m_pesa'>
+                        <div className='flex items-center gap-2'>
+                          M-Pesa (Vodacom) - Most Popular
+                        </div>
                       </SelectItem>
-                      <SelectItem value='t_pesa'>T-Pesa (TTCL)</SelectItem>
+                      <SelectItem value='airtel_money'>
+                        <div className='flex items-center gap-2'>
+                          Airtel Money - Popular for Tourism
+                        </div>
+                      </SelectItem>
+                      <SelectItem value='tigopesa'>
+                        <div className='flex items-center gap-2'>
+                          Tigopesa (Tigo)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value='halopesa'>
+                        <div className='flex items-center gap-2'>
+                          Halopesa (Halotel)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value='t_pesa'>
+                        <div className='flex items-center gap-2'>
+                          T-Pesa (TTCL)
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <p className='text-xs text-muted-foreground'>
-                    Most popular: M-Pesa and Airtel Money for tourism payments
+                    Select the mobile money service used for this payment
                   </p>
                 </div>
               )}
@@ -356,37 +359,32 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     onChange={(e) => setTransactionReference(e.target.value)}
                     placeholder='e.g., TXN123456789'
                     className='pl-10'
-                    disabled={isSubmitting}
                   />
                 </div>
                 <p className='text-xs text-muted-foreground'>
-                  Bank reference, mobile money confirmation code, or transaction
-                  ID
+                  Bank reference number, transaction ID, or receipt number
                 </p>
               </div>
 
-              {/* Payment Date */}
+              {/* Payment Date - Auto-set to today */}
               <div className='space-y-2'>
                 <Label
                   htmlFor='payment_date'
                   className='text-base font-semibold'>
-                  Payment Date <span className='text-destructive'>*</span>
+                  Payment Date
                 </Label>
                 <div className='relative'>
                   <Calendar className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
                     id='payment_date'
                     type='date'
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
+                    defaultValue={new Date().toISOString().split("T")[0]}
                     className='pl-10'
-                    required
-                    disabled={isSubmitting}
                   />
                 </div>
               </div>
 
-              {/* Payment Evidence Upload */}
+              {/* Payment Evidence/Proof Upload */}
               <div className='space-y-2'>
                 <Label
                   htmlFor='payment_evidence'
@@ -403,7 +401,6 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                     accept='image/*,.pdf'
                     onChange={handleFileChange}
                     className='cursor-pointer'
-                    disabled={isSubmitting}
                   />
                   {paymentEvidence && (
                     <p className='text-sm text-green-600 mt-2 flex items-center gap-2'>
@@ -416,7 +413,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                   {paymentMethod === "bank_transfer" &&
                     "Upload bank statement or transfer receipt (required)"}
                   {paymentMethod === "mobile_money" &&
-                    "Upload mobile money confirmation SMS or screenshot"}
+                    "Upload M-Pesa/mobile money confirmation SMS or screenshot"}
                   {paymentMethod === "credit_card" &&
                     "Upload payment receipt or confirmation"}
                   {paymentMethod === "debit_card" &&
@@ -441,7 +438,6 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   placeholder='Add any additional notes about this payment...'
                   rows={3}
-                  disabled={isSubmitting}
                 />
               </div>
 
@@ -479,6 +475,16 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Info Alert */}
+              <Alert>
+                <AlertCircle className='h-4 w-4' />
+                <AlertDescription className='text-sm'>
+                  This is a UI preview. Payment gateway integration will be
+                  added later. The booking record will be updated with this
+                  payment information.
+                </AlertDescription>
+              </Alert>
             </div>
           </ScrollArea>
 
@@ -486,8 +492,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
             <Button
               type='button'
               variant='outline'
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}>
+              onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
@@ -500,10 +505,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                 (paymentMethod === "bank_transfer" && !paymentEvidence)
               }>
               {isSubmitting ? (
-                <>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                  Processing...
-                </>
+                "Processing..."
               ) : (
                 <>
                   <DollarSign className='h-4 w-4' />
@@ -512,6 +514,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
               )}
             </Button>
           </DialogFooter>
+          {error && <p className='text-red-600 text-sm mt-2'>{error}</p>}
         </form>
       </DialogContent>
     </Dialog>
