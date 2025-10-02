@@ -24,6 +24,7 @@ import {
   Route,
   Loader2,
 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import { driverService } from "../../services/driverService";
 import AddDriverDialog from "../modals/AddDriverDialog";
 import ViewScheduleDialog from "../modals/ViewScheduleDialog";
@@ -77,9 +78,16 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
     const { data, error } = await driverService.createDriver(driverData);
 
     if (error) {
-      alert(`Error adding driver: ${error}`);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Error adding driver: ${error}`,
+      });
     } else {
-      alert("Driver added successfully!");
+      toast({
+        title: "Success",
+        description: "Driver added successfully!",
+      });
       fetchDrivers(); // Refresh the list
     }
   };
