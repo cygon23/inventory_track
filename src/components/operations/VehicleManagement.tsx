@@ -1,275 +1,199 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Car, 
-  Calendar, 
-  Fuel, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import {
+  Car,
+  Calendar,
+  Fuel,
   Wrench,
   CheckCircle,
   AlertTriangle,
   Search,
-  Filter,
-  Plus,
   Eye,
   Settings,
   MapPin,
-  Clock,
-  Users
-} from 'lucide-react';
-import { User } from '@/data/mockUsers';
-import AddVehicleDialog from '../modals/AddVehicleDialog';
+  Users,
+} from "lucide-react";
+import { callVehicleFunction } from "../../services/vehicleService";
+import AddVehicleDialog from "../modals/AddVehicleDialog";
+import VehicleDetailsDialog from "../modals/VehicleDetailsDialog";
+import MaintenanceDialog from "../modals/MaintenanceDialog";
+import AssignVehicleDialog from "../modals/AssignVehicleDialog";
+import { toast } from "@/components/ui/use-toast";
+
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface Vehicle {
+  id: string;
+  model: string;
+  plate: string;
+  year: number;
+  status: string;
+  condition: string;
+  driver?: string | null;
+  currentTrip?: any;
+  mileage: number;
+  fuelLevel: number;
+  capacity: number;
+  serviceDue: number;
+  lastService: string;
+  nextService?: string;
+  features: string[];
+  issues: { type: string; reported: string; description: string }[];
+  maintenance: { type: string; cost: number; type: string }[];
+}
 
 interface VehicleManagementProps {
   currentUser: User;
 }
 
-const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+const VehicleManagement: React.FC<VehicleManagementProps> = ({
+  currentUser,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const vehicles = [
-    {
-      id: 'V001',
-      model: 'Toyota Land Cruiser',
-      year: '2023',
-      plate: 'T123ABC',
-      status: 'on_trip',
-      condition: 'excellent',
-      driver: 'James Mollel',
-      currentTrip: {
-        id: 'SF001',
-        customer: 'Johnson Family',
-        location: 'Serengeti Central',
-        endDate: '2024-01-17'
-      },
-      mileage: 45230,
-      fuelLevel: 85,
-      lastService: '2024-01-01',
-      nextService: '2024-04-01',
-      serviceDue: 90,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid', 'Fire Extinguisher'],
-      maintenance: [
-        { type: 'Oil Change', date: '2024-01-01', cost: '$80' },
-        { type: 'Tire Rotation', date: '2023-12-15', cost: '$40' },
-        { type: 'Brake Inspection', date: '2023-12-01', cost: '$120' }
-      ],
-      issues: []
-    },
-    {
-      id: 'V002',
-      model: 'Toyota Land Cruiser',
-      year: '2023',
-      plate: 'T456DEF',
-      status: 'available',
-      condition: 'excellent',
-      driver: null,
-      currentTrip: null,
-      mileage: 38150,
-      fuelLevel: 92,
-      lastService: '2023-12-20',
-      nextService: '2024-03-20',
-      serviceDue: 75,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid', 'Fire Extinguisher', 'GPS'],
-      maintenance: [
-        { type: 'Full Service', date: '2023-12-20', cost: '$350' },
-        { type: 'Oil Change', date: '2023-11-15', cost: '$80' }
-      ],
-      issues: []
-    },
-    {
-      id: 'V003',
-      model: 'Toyota Land Cruiser',
-      year: '2021',
-      plate: 'T789GHI',
-      status: 'on_trip',
-      condition: 'good',
-      driver: 'Peter Sanga',
-      currentTrip: {
-        id: 'SF003',
-        customer: 'Chen Group',
-        location: 'Tarangire NP',
-        endDate: '2024-01-18'
-      },
-      mileage: 67890,
-      fuelLevel: 70,
-      lastService: '2023-11-30',
-      nextService: '2024-02-28',
-      serviceDue: 45,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid'],
-      maintenance: [
-        { type: 'Oil Change', date: '2023-11-30', cost: '$80' },
-        { type: 'Brake Pads', date: '2023-10-15', cost: '$200' }
-      ],
-      issues: [
-        { type: 'Minor', description: 'Air conditioning not cooling efficiently', reported: '2024-01-10' }
-      ]
-    },
-    {
-      id: 'V004',
-      model: 'Toyota Land Cruiser',
-      year: '2023',
-      plate: 'T101JKL',
-      status: 'scheduled',
-      condition: 'excellent',
-      driver: 'Grace Mwamba',
-      currentTrip: {
-        id: 'SF004',
-        customer: 'Wilson Family',
-        location: 'Preparing for departure',
-        endDate: '2024-01-20'
-      },
-      mileage: 22100,
-      fuelLevel: 95,
-      lastService: '2024-01-05',
-      nextService: '2024-04-05',
-      serviceDue: 95,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid', 'Fire Extinguisher', 'GPS', 'Child Seats'],
-      maintenance: [
-        { type: 'Routine Check', date: '2024-01-05', cost: '$120' }
-      ],
-      issues: []
-    },
-    {
-      id: 'V005',
-      model: 'Toyota Land Cruiser',
-      year: '2020',
-      plate: 'T202MNO',
-      status: 'maintenance',
-      condition: 'fair',
-      driver: null,
-      currentTrip: null,
-      mileage: 95430,
-      fuelLevel: 40,
-      lastService: '2024-01-08',
-      nextService: '2024-01-15',
-      serviceDue: 10,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid'],
-      maintenance: [
-        { type: 'Engine Service', date: '2024-01-08', cost: '$450' },
-        { type: 'Transmission Check', date: '2023-12-20', cost: '$200' }
-      ],
-      issues: [
-        { type: 'Major', description: 'Transmission needs repair', reported: '2024-01-08' },
-        { type: 'Minor', description: 'Passenger window not working', reported: '2024-01-05' }
-      ]
-    },
-    {
-      id: 'V006',
-      model: 'Toyota Land Cruiser',
-      year: '2022',
-      plate: 'T303PQR',
-      status: 'available',
-      condition: 'good',
-      driver: null,
-      currentTrip: null,
-      mileage: 54320,
-      fuelLevel: 78,
-      lastService: '2023-12-10',
-      nextService: '2024-03-10',
-      serviceDue: 60,
-      capacity: 7,
-      features: ['4WD', 'AC', 'Radio', 'First Aid', 'Fire Extinguisher'],
-      maintenance: [
-        { type: 'Oil Change', date: '2023-12-10', cost: '$80' },
-        { type: 'Tire Change', date: '2023-11-20', cost: '$600' }
-      ],
-      issues: []
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      const response = await callVehicleFunction("fetchVehicles");
+      if (response.vehicles) {
+        setVehicles(response.vehicles);
+      } else {
+        console.error("Error fetching vehicles:", response.error);
+        toast({
+          title: "Error fetching vehicles",
+          description:
+            response.error instanceof Error
+              ? response.error.message
+              : String(response.error),
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch vehicles",
+        variant: "destructive",
+      });
     }
-  ];
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const totalFleet = vehicles.length;
+  const operational = vehicles.filter((v) => v.status === "available").length;
+  const inMaintenance = vehicles.filter(
+    (v) => v.status === "maintenance"
+  ).length;
+  const serviceDue = vehicles.filter((v) => v.serviceDue <= 7).length;
 
   const stats = [
     {
-      title: 'Total Fleet',
-      value: '18',
-      change: '6 models',
+      title: "Total Fleet",
+      value: totalFleet,
       icon: Car,
-      color: 'text-primary'
+      color: "text-primary",
     },
     {
-      title: 'Operational',
-      value: '15',
-      change: '83% availability',
+      title: "Operational",
+      value: operational,
       icon: CheckCircle,
-      color: 'text-success'
+      color: "text-success",
     },
     {
-      title: 'In Maintenance',
-      value: '3',
-      change: '2 major repairs',
+      title: "In Maintenance",
+      value: inMaintenance,
       icon: Wrench,
-      color: 'text-warning'
+      color: "text-warning",
     },
     {
-      title: 'Service Due',
-      value: '5',
-      change: '2 overdue',
+      title: "Service Due",
+      value: serviceDue,
       icon: AlertTriangle,
-      color: 'text-destructive'
-    }
+      color: "text-destructive",
+    },
   ];
 
   const getStatusColor = (status: string) => {
     const colors = {
-      available: 'bg-success/10 text-success border-success/20',
-      on_trip: 'bg-primary/10 text-primary border-primary/20',
-      scheduled: 'bg-warning/10 text-warning border-warning/20',
-      maintenance: 'bg-destructive/10 text-destructive border-destructive/20',
-      out_of_service: 'bg-muted/10 text-muted-foreground border-muted/20'
+      available: "bg-success/10 text-success border-success/20",
+      on_trip: "bg-primary/10 text-primary border-primary/20",
+      scheduled: "bg-warning/10 text-warning border-warning/20",
+      maintenance: "bg-warning/10 text-warning border-warning/20",
+      out_of_service: "bg-muted/10 text-muted-foreground border-muted/20",
     };
-    return colors[status as keyof typeof colors] || 'bg-muted/10 text-muted-foreground border-muted/20';
+    return (
+      colors[status as keyof typeof colors] ||
+      "bg-muted/10 text-muted-foreground border-muted/20"
+    );
   };
 
   const getConditionColor = (condition: string) => {
     const colors = {
-      excellent: 'text-success',
-      good: 'text-primary',
-      fair: 'text-warning',
-      poor: 'text-destructive'
+      excellent: "text-success",
+      good: "text-primary",
+      fair: "text-warning",
+      poor: "text-destructive",
     };
-    return colors[condition as keyof typeof colors] || 'text-muted-foreground';
+    return colors[condition as keyof typeof colors] || "text-muted-foreground";
   };
 
-  const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
+  const formatStatus = (status: string) =>
+    status
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
 
   const getFuelLevelColor = (level: number) => {
-    if (level >= 50) return 'text-success';
-    if (level >= 25) return 'text-warning';
-    return 'text-destructive';
+    if (level >= 50) return "text-success";
+    if (level >= 25) return "text-warning";
+    return "text-destructive";
   };
 
   const getServiceDueColor = (days: number) => {
-    if (days >= 30) return 'text-success';
-    if (days >= 7) return 'text-warning';
-    return 'text-destructive';
+    if (days >= 30) return "text-success";
+    if (days >= 7) return "text-warning";
+    return "text-destructive";
   };
 
-  const filteredVehicles = vehicles.filter(vehicle => {
-    const matchesSearch = vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (vehicle.driver && vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesFilter = filterStatus === 'all' || vehicle.status === filterStatus;
-    
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const matchesSearch =
+      vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (vehicle.driver &&
+        vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesFilter =
+      filterStatus === "all" || vehicle.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   return (
     <div className='space-y-6'>
-      {/* Header */}
       <div className='flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0'>
         <div>
           <h1 className='text-2xl md:text-3xl font-bold text-foreground'>
@@ -279,13 +203,9 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
             Monitor fleet status, maintenance, and availability
           </p>
         </div>
-        <Button onClick={() => setIsAddVehicleOpen(true)}>
-          <Plus className='h-4 w-4 mr-2' />
-          Add Vehicle
-        </Button>
+        <Button onClick={() => setIsAddVehicleOpen(true)}>Add Vehicle</Button>
       </div>
 
-      {/* Stats */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -300,9 +220,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                     <p className='text-xl md:text-2xl font-bold'>
                       {stat.value}
                     </p>
-                    <p className='text-xs text-muted-foreground'>
-                      {stat.change}
-                    </p>
                   </div>
                   <Icon className={`h-6 w-6 md:h-8 md:w-8 ${stat.color}`} />
                 </div>
@@ -312,7 +229,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
         })}
       </div>
 
-      {/* Filters and Search */}
       <Card className='safari-card'>
         <CardContent className='p-4 md:p-6'>
           <div className='flex flex-col sm:flex-row gap-4'>
@@ -326,36 +242,26 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
               />
             </div>
             <div className='flex space-x-2'>
-              <Button
-                variant={filterStatus === "all" ? "default" : "outline"}
-                onClick={() => setFilterStatus("all")}
-                size='sm'>
-                All
-              </Button>
-              <Button
-                variant={filterStatus === "available" ? "default" : "outline"}
-                onClick={() => setFilterStatus("available")}
-                size='sm'>
-                Available
-              </Button>
-              <Button
-                variant={filterStatus === "on_trip" ? "default" : "outline"}
-                onClick={() => setFilterStatus("on_trip")}
-                size='sm'>
-                On Trip
-              </Button>
-              <Button
-                variant={filterStatus === "maintenance" ? "default" : "outline"}
-                onClick={() => setFilterStatus("maintenance")}
-                size='sm'>
-                Maintenance
-              </Button>
+              {["all", "available", "on_trip", "maintenance"].map((status) => (
+                <Button
+                  key={status}
+                  variant={filterStatus === status ? "default" : "outline"}
+                  onClick={() => setFilterStatus(status)}
+                  size='sm'>
+                  {status === "all"
+                    ? "All"
+                    : status === "available"
+                    ? "Available"
+                    : status === "on_trip"
+                    ? "On Trip"
+                    : "Maintenance"}
+                </Button>
+              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Vehicle Cards */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {filteredVehicles.map((vehicle) => (
           <Card key={vehicle.id} className='safari-card'>
@@ -388,7 +294,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
               </div>
             </CardHeader>
             <CardContent className='space-y-4'>
-              {/* Current Assignment */}
               {vehicle.currentTrip ? (
                 <div className='bg-primary/10 p-3 rounded-lg'>
                   <div className='flex items-center justify-between'>
@@ -431,7 +336,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                 </div>
               ) : null}
 
-              {/* Vehicle Stats */}
               <div className='grid grid-cols-2 gap-4'>
                 <div className='space-y-3'>
                   <div>
@@ -443,7 +347,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                     </div>
                     <Progress value={vehicle.fuelLevel} className='h-2 mt-1' />
                   </div>
-
                   <div className='text-sm'>
                     <p className='font-medium'>Mileage</p>
                     <p className='text-muted-foreground'>
@@ -451,7 +354,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                     </p>
                   </div>
                 </div>
-
                 <div className='space-y-3'>
                   <div className='text-sm'>
                     <p className='font-medium'>Capacity</p>
@@ -460,7 +362,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                       <span>{vehicle.capacity} passengers</span>
                     </div>
                   </div>
-
                   <div className='text-sm'>
                     <p className='font-medium'>Service Due</p>
                     <p className={`${getServiceDueColor(vehicle.serviceDue)}`}>
@@ -472,11 +373,10 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                 </div>
               </div>
 
-              {/* Features */}
               <div>
                 <p className='font-medium text-sm mb-2'>Features</p>
                 <div className='flex flex-wrap gap-1'>
-                  {vehicle.features.map((feature, index) => (
+                  {vehicle.features?.map((feature, index) => (
                     <Badge key={index} variant='outline' className='text-xs'>
                       {feature}
                     </Badge>
@@ -484,8 +384,7 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                 </div>
               </div>
 
-              {/* Issues */}
-              {vehicle.issues.length > 0 && (
+              {vehicle.issues?.length > 0 && (
                 <div className='bg-destructive/10 p-3 rounded-lg'>
                   <p className='font-medium text-destructive text-sm mb-2'>
                     Active Issues
@@ -508,11 +407,10 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                 </div>
               )}
 
-              {/* Last Maintenance */}
               <div className='text-sm'>
                 <p className='font-medium'>Last Service</p>
                 <p className='text-muted-foreground'>{vehicle.lastService}</p>
-                {vehicle.maintenance.length > 0 && (
+                {vehicle.maintenance?.length > 0 && (
                   <p className='text-xs text-muted-foreground'>
                     {vehicle.maintenance[0].type} -{" "}
                     {vehicle.maintenance[0].cost}
@@ -520,28 +418,35 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
                 )}
               </div>
 
-              {/* Last Maintenance */}
-              <AddVehicleDialog
-                open={isAddVehicleOpen}
-                onOpenChange={setIsAddVehicleOpen}
-                onSubmit={(data) => {
-                  console.log("New vehicle:", data);
-                  // TODO: save to DB or update state
-                }}
-              />
-
-              {/* Actions */}
               <div className='flex space-x-2'>
-                <Button size='sm' variant='outline' className='flex-1'>
-                  <Eye className='h-4 w-4 mr-1' />
-                  Details
+                <Button
+                  size='sm'
+                  variant='outline'
+                  className='flex-1'
+                  onClick={() => {
+                    setSelectedVehicle(vehicle);
+                    setIsDetailsOpen(true);
+                  }}>
+                  <Eye className='h-4 w-4 mr-1' /> Details
                 </Button>
-                <Button size='sm' variant='outline' className='flex-1'>
-                  <Settings className='h-4 w-4 mr-1' />
-                  Maintenance
+                <Button
+                  size='sm'
+                  variant='outline'
+                  className='flex-1'
+                  onClick={() => {
+                    setSelectedVehicle(vehicle);
+                    setIsMaintenanceOpen(true);
+                  }}>
+                  <Settings className='h-4 w-4 mr-1' /> Maintenance
                 </Button>
                 {vehicle.status === "available" && (
-                  <Button size='sm' className='flex-1'>
+                  <Button
+                    size='sm'
+                    className='flex-1'
+                    onClick={() => {
+                      setSelectedVehicle(vehicle);
+                      setIsAssignOpen(true);
+                    }}>
                     Assign
                   </Button>
                 )}
@@ -550,6 +455,103 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ currentUser }) =>
           </Card>
         ))}
       </div>
+
+      <AddVehicleDialog
+        open={isAddVehicleOpen}
+        onOpenChange={setIsAddVehicleOpen}
+        onSubmit={async (formData) => {
+          const response = await callVehicleFunction("addVehicle", formData);
+          if (response.vehicle) {
+            toast({
+              title: "Vehicle Added",
+              description: "Vehicle added successfully",
+            });
+            fetchVehicles();
+            setIsAddVehicleOpen(false);
+          } else {
+            toast({
+              title: "Add Vehicle Failed",
+              description:
+                response.error instanceof Error
+                  ? response.error.message
+                  : String(response.error),
+              variant: "destructive",
+            });
+          }
+        }}
+      />
+
+      <VehicleDetailsDialog
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+        vehicle={selectedVehicle}
+      />
+
+      <MaintenanceDialog
+        open={isMaintenanceOpen}
+        onOpenChange={setIsMaintenanceOpen}
+        vehicle={selectedVehicle}
+        onSubmit={async (formData) => {
+          if (!selectedVehicle) return;
+          const payload = {
+            vehicle_id: selectedVehicle.id,
+            type: formData.maintenanceType,
+            date: formData.scheduledDate,
+            cost: Number(formData.estimatedCost || 0),
+            notes: formData.notes || "",
+          };
+          const response = await callVehicleFunction("addMaintenance", payload);
+          if (response.maintenance) {
+            toast({
+              title: "Maintenance Scheduled",
+              description: "Maintenance scheduled successfully",
+            });
+            fetchVehicles();
+            setIsMaintenanceOpen(false);
+          } else {
+            toast({
+              title: "Schedule Failed",
+              description:
+                response.error instanceof Error
+                  ? response.error.message
+                  : String(response.error),
+              variant: "destructive",
+            });
+          }
+        }}
+      />
+
+      <AssignVehicleDialog
+        open={isAssignOpen}
+        onOpenChange={setIsAssignOpen}
+        vehicle={selectedVehicle}
+        onSubmit={async (formData) => {
+          if (!selectedVehicle) return;
+          const payload = {
+            vehicle_id: selectedVehicle.id,
+            driver_id: formData.driverId,
+            current_trip_id: formData.tripId || null,
+          };
+          const response = await callVehicleFunction("assignDriver", payload);
+          if (response.vehicle) {
+            toast({
+              title: "Driver Assigned",
+              description: "Driver assigned successfully",
+            });
+            fetchVehicles();
+            setIsAssignOpen(false);
+          } else {
+            toast({
+              title: "Assignment Failed",
+              description:
+                response.error instanceof Error
+                  ? response.error.message
+                  : String(response.error),
+              variant: "destructive",
+            });
+          }
+        }}
+      />
     </div>
   );
 };

@@ -65,8 +65,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 const AppRoutes: React.FC = () => {
   const { user, loading } = useAuth();
 
-  console.log("AppRoutes: user:", user, "loading:", loading);
-
   return (
     <Routes>
       <Route path='/nav' element={<NavigationSwitcher />} />

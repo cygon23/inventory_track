@@ -62,21 +62,36 @@ export const useTrips = () => {
             setLoading(true);
             setError(null);
 
-            const { data, error: fetchError } = await supabase
-                .from("trips")
-                .select(`
-          *,
-          bookings!inner(booking_reference),
-          drivers(name),
-          vehicles(model, plate_number),
-          trip_itinerary(
-            id,
-            day_number,
-            location,
-            status
-          )
-        `)
-                .order("start_date", { ascending: false });
+           const { data, error: fetchError } = await supabase
+  .from("trips")
+  .select(`
+    *,
+    bookings!inner(booking_reference),
+    drivers:drivers!trips_driver_id_fkey(
+      id,
+      experience,
+      rating,
+      specialties,
+      total_trips,
+      average_rating,
+      on_time_percentage,
+      next_available,
+      users:users!drivers_user_id_fkey(
+        name,
+        email
+      )
+    ),
+    vehicles:vehicles!trips_vehicle_id_fkey(model, plate),
+    trip_itinerary(
+      id,
+      day_number,
+      location,
+      status
+    )
+  `)
+  .order("start_date", { ascending: false });
+
+
 
             if (fetchError) throw fetchError;
 
