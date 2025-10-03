@@ -9,16 +9,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import {
   Car,
-  Calendar,
   Users,
   Fuel,
   MapPin,
   CheckCircle,
   AlertTriangle,
   Wrench,
-  Clock,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface Vehicle {
@@ -36,26 +37,30 @@ interface Vehicle {
     endDate: string;
   } | null;
   mileage: number;
-  fuelLevel: number;
+  fuel_level: number;
   lastService: string;
   nextService: string;
   serviceDue: number;
   capacity: number;
-  features?: string[]; // <-- optional
-  maintenance?: Array<{ type: string; date: string; cost: string }>; // optional
-  issues?: Array<{ type: string; description: string; reported: string }>; // optional
+  features?: string[];
+  maintenance?: Array<{ type: string; date: string; cost: string }>;
+  issues?: Array<{ type: string; description: string; reported: string }>;
 }
 
 interface VehicleDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vehicle: Vehicle | null;
+  onEdit: (vehicle: Vehicle) => void;
+  onDelete: (id: string) => void;
 }
 
 const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
   open,
   onOpenChange,
   vehicle,
+  onEdit,
+  onDelete,
 }) => {
   if (!vehicle) return null;
 
@@ -102,7 +107,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
         </DialogHeader>
 
         <div className='space-y-6'>
-          {/* Basic Info */}
           <div>
             <h3 className='font-semibold mb-3'>Basic Information</h3>
             <div className='grid grid-cols-2 gap-4'>
@@ -143,7 +147,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
 
           <Separator />
 
-          {/* Current Trip */}
           {vehicle.currentTrip && (
             <>
               <div className='bg-primary/10 p-4 rounded-lg'>
@@ -184,7 +187,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
             </>
           )}
 
-          {/* Vehicle Metrics */}
           <div>
             <h3 className='font-semibold mb-3'>Vehicle Metrics</h3>
             <div className='space-y-4'>
@@ -195,10 +197,10 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
                     <span className='text-sm'>Fuel Level</span>
                   </div>
                   <span className='text-sm font-medium'>
-                    {vehicle.fuelLevel}%
+                    {vehicle.fuel_level}%
                   </span>
                 </div>
-                <Progress value={vehicle.fuelLevel} className='h-2' />
+                <Progress value={vehicle.fuel_level} className='h-2' />
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
@@ -225,7 +227,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
 
           <Separator />
 
-          {/* Features */}
           <div>
             <h3 className='font-semibold mb-3 flex items-center'>
               <CheckCircle className='h-4 w-4 mr-2' />
@@ -242,7 +243,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
 
           <Separator />
 
-          {/* Maintenance */}
           <div>
             <h3 className='font-semibold mb-3 flex items-center'>
               <Wrench className='h-4 w-4 mr-2' />
@@ -278,7 +278,6 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
             </div>
           </div>
 
-          {/* Issues */}
           {issues.length > 0 && (
             <>
               <Separator />
@@ -307,6 +306,25 @@ const VehicleDetailsDialog: React.FC<VehicleDetailsDialogProps> = ({
               </div>
             </>
           )}
+        </div>
+
+        <Separator className='my-4' />
+
+        <div className='flex justify-end space-x-3'>
+          <Button
+            variant='outline'
+            onClick={() => onEdit(vehicle)}
+            className='flex items-center space-x-2'>
+            <Pencil className='h-4 w-4' />
+            <span>Edit</span>
+          </Button>
+          <Button
+            variant='destructive'
+            onClick={() => onDelete(vehicle.id)}
+            className='flex items-center space-x-2'>
+            <Trash2 className='h-4 w-4' />
+            <span>Delete</span>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

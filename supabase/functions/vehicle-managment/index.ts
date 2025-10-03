@@ -155,6 +155,50 @@ serve(async (req) => {
           },
         });
       }
+ case "updateVehicle": {
+  const { id, updates } = data;
+
+  // Remove 'issues' if present
+  const { issues, ...updatesWithoutIssues } = updates;
+
+  const { data: vehicle, error } = await supabase
+    .from("vehicles")
+    .update(updatesWithoutIssues) 
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return new Response(JSON.stringify({ vehicle }), {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+
+case "deleteVehicle": {
+  const { id } = data;
+
+  const { error } = await supabase
+    .from("vehicles")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+    },
+  });
+}
+
 
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {

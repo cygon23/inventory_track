@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,12 +17,14 @@ interface AddVehicleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => void;
+  vehicle?: any; // optional, present when editing
 }
 
 const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
   open,
   onOpenChange,
   onSubmit,
+  vehicle,
 }) => {
   // Form state
   const [model, setModel] = useState("");
@@ -43,6 +45,54 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
 
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Prefill form when editing
+  useEffect(() => {
+    if (vehicle) {
+      setModel(vehicle.model || "");
+      setYear(vehicle.year?.toString() || "");
+      setPlate(vehicle.plate || "");
+      setStatus(vehicle.status || "");
+      setCondition(vehicle.condition || "");
+      setDriver(vehicle.driver || "");
+      setCurrentTrip(vehicle.currentTrip?.id || "");
+      setMileage(vehicle.mileage?.toString() || "");
+      setFuelLevel(vehicle.fuel_level?.toString() || "");
+      setCapacity(vehicle.capacity?.toString() || "");
+      setLastService(vehicle.lastService || "");
+      setNextService(vehicle.nextService || "");
+      setServiceDue(vehicle.serviceDue?.toString() || "");
+      setFeatures((vehicle.features || []).join(", "));
+      setIssues((vehicle.issues || []).map((i: any) => i.type).join(", "));
+    } else {
+      // Reset form if adding new
+      setModel("");
+      setYear("");
+      setPlate("");
+      setStatus("");
+      setCondition("");
+      setDriver("");
+      setCurrentTrip("");
+      setMileage("");
+      setFuelLevel("");
+      setCapacity("");
+      setLastService("");
+      setNextService("");
+      setServiceDue("");
+      setFeatures("");
+      setIssues("");
+    }
+  }, [vehicle, open]);
+
+  // Prevent negative numbers or non-numeric input
+  const handleNumberInput =
+    (setter: (val: string) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (/^\d*$/.test(value)) {
+        setter(value);
+      }
+    };
 
   const handleSubmit = async () => {
     // Parse numeric fields
@@ -87,56 +137,45 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
     };
 
     try {
-      await onSubmit?.(payload);
-      toast({
-        title: "Success",
-        description: "Vehicle added successfully!",
-        variant: "default",
-      });
-      // Reset form
-      setModel("");
-      setYear("");
-      setPlate("");
-      setStatus("");
-      setCondition("");
-      setDriver("");
-      setCurrentTrip("");
-      setMileage("");
-      setFuelLevel("");
-      setCapacity("");
-      setLastService("");
-      setNextService("");
-      setServiceDue("");
-      setFeatures("");
-      setIssues("");
+      if (vehicle) {
+        // Edit mode
+        await onSubmit?.({ id: vehicle.id, updates: payload });
+        toast({
+          title: "Success",
+          description: "Vehicle updated successfully!",
+        });
+      } else {
+        // Add mode
+        await onSubmit?.(payload);
+        toast({
+          title: "Success",
+          description: "Vehicle added successfully!",
+        });
+      }
       onOpenChange(false);
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to add vehicle.",
+        description: err.message || "Operation failed.",
         variant: "destructive",
       });
     }
   };
-
-  // Prevent negative numbers or zero
-  const handleNumberInput =
-    (setter: (val: string) => void) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      if (/^\d*$/.test(value)) {
-        setter(value);
-      }
-    };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
-            <DialogTitle>Add New Vehicle</DialogTitle>
+            <DialogTitle>
+              {vehicle ? "Edit Vehicle" : "Add New Vehicle"}
+            </DialogTitle>
             <DialogDescription>
-              Fill in the details to register a new safari vehicle in the fleet
+              Fill in the details to{" "}
+              {vehicle
+                ? "update this vehicle"
+                : "register a new safari vehicle"}{" "}
+              in the fleet
             </DialogDescription>
           </DialogHeader>
 
@@ -200,7 +239,7 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
               </div>
             </div>
 
-            {/* Assignment Info */}
+            {/* Driver & Assignment */}
             <div className='space-y-4'>
               <h3 className='text-sm font-semibold text-foreground'>
                 Driver & Assignment
@@ -320,7 +359,9 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
             <Button variant='outline' onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setConfirmOpen(true)}>Add Vehicle</Button>
+            <Button onClick={() => setConfirmOpen(true)}>
+              {vehicle ? "Update Vehicle" : "Add Vehicle"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -331,8 +372,8 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
           <DialogHeader>
             <DialogTitle>Confirm Submission</DialogTitle>
             <DialogDescription>
-              Are you sure you want to add this vehicle? This action cannot be
-              undone.
+              Are you sure you want to {vehicle ? "update" : "add"} this
+              vehicle? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className='flex justify-end space-x-2'>
@@ -344,7 +385,7 @@ const AddVehicleDialog: React.FC<AddVehicleDialogProps> = ({
                 setConfirmOpen(false);
                 handleSubmit();
               }}>
-              Yes, Add Vehicle
+              Yes, {vehicle ? "Update" : "Add"} Vehicle
             </Button>
           </DialogFooter>
         </DialogContent>

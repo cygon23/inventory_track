@@ -46,7 +46,7 @@ interface Vehicle {
   driver?: string | null;
   currentTrip?: any;
   mileage: number;
-  fuelLevel: number;
+  fuel_level: number;
   capacity: number;
   serviceDue: number;
   lastService: string;
@@ -341,11 +341,11 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
                   <div>
                     <div className='flex items-center justify-between text-sm'>
                       <span>Fuel Level</span>
-                      <span className={getFuelLevelColor(vehicle.fuelLevel)}>
-                        {vehicle.fuelLevel}%
+                      <span className={getFuelLevelColor(vehicle.fuel_level)}>
+                        {vehicle.fuel_level}%
                       </span>
                     </div>
-                    <Progress value={vehicle.fuelLevel} className='h-2 mt-1' />
+                    <Progress value={vehicle.fuel_level} className='h-2 mt-1' />
                   </div>
                   <div className='text-sm'>
                     <p className='font-medium'>Mileage</p>
@@ -458,19 +458,33 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
 
       <AddVehicleDialog
         open={isAddVehicleOpen}
-        onOpenChange={setIsAddVehicleOpen}
+        onOpenChange={(open) => {
+          setIsAddVehicleOpen(open);
+          if (!open) setSelectedVehicle(null);
+        }}
+        vehicle={selectedVehicle}
         onSubmit={async (formData) => {
-          const response = await callVehicleFunction("addVehicle", formData);
+          const response = selectedVehicle
+            ? await callVehicleFunction("updateVehicle", {
+                id: selectedVehicle.id,
+                ...formData,
+              })
+            : await callVehicleFunction("addVehicle", formData);
+
           if (response.vehicle) {
             toast({
-              title: "Vehicle Added",
-              description: "Vehicle added successfully",
+              title: selectedVehicle ? "Vehicle Updated" : "Vehicle Added",
+              description: selectedVehicle
+                ? "Vehicle updated successfully"
+                : "Vehicle added successfully",
             });
             fetchVehicles();
             setIsAddVehicleOpen(false);
           } else {
             toast({
-              title: "Add Vehicle Failed",
+              title: selectedVehicle
+                ? "Update Vehicle Failed"
+                : "Add Vehicle Failed",
               description:
                 response.error instanceof Error
                   ? response.error.message
@@ -485,6 +499,31 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         vehicle={selectedVehicle}
+        onEdit={(vehicle) => {
+          setSelectedVehicle(vehicle);
+          setIsDetailsOpen(false);
+          setIsAddVehicleOpen(true);
+        }}
+        onDelete={async (id) => {
+          const response = await callVehicleFunction("deleteVehicle", { id });
+          if (response.success) {
+            toast({
+              title: "Vehicle Deleted",
+              description: "The vehicle was removed successfully",
+            });
+            fetchVehicles();
+            setIsDetailsOpen(false);
+          } else {
+            toast({
+              title: "Delete Failed",
+              description:
+                response.error instanceof Error
+                  ? response.error.message
+                  : String(response.error),
+              variant: "destructive",
+            });
+          }
+        }}
       />
 
       <MaintenanceDialog
