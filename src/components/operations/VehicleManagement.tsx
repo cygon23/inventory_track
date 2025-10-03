@@ -532,20 +532,38 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
         vehicle={selectedVehicle}
         onSubmit={async (formData) => {
           if (!selectedVehicle) return;
+
           const payload = {
             vehicle_id: selectedVehicle.id,
-            type: formData.maintenanceType,
-            date: formData.scheduledDate,
-            cost: Number(formData.estimatedCost || 0),
-            notes: formData.notes || "",
+            type: formData.type,
+            date: formData.date,
+            cost: Number(formData.cost || 0),
+            description: formData.description || "",
           };
+
           const response = await callVehicleFunction("addMaintenance", payload);
+
           if (response.maintenance) {
             toast({
               title: "Maintenance Scheduled",
               description: "Maintenance scheduled successfully",
             });
+
+            // 🔹 Key change: refresh **only this vehicle**
+            const updatedVehicleResponse = await callVehicleFunction(
+              "getVehicleById",
+              {
+                id: selectedVehicle.id,
+              }
+            );
+
+            if (updatedVehicleResponse.vehicle) {
+              setSelectedVehicle(updatedVehicleResponse.vehicle);
+            }
+
+            // 🔹 Optional: update entire list too
             fetchVehicles();
+
             setIsMaintenanceOpen(false);
           } else {
             toast({

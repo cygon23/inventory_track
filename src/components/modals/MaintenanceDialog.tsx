@@ -29,10 +29,11 @@ interface Vehicle {
   model: string;
   plate: string;
   mileage: number;
-  maintenance?: Array<{
+  vehicle_maintenance?: Array<{
     type: string;
     date: string;
     cost: string;
+    description?: string;
   }>;
 }
 
@@ -58,17 +59,25 @@ const MaintenanceDialog: React.FC<MaintenanceDialogProps> = ({
 
   if (!vehicle) return null;
 
-  const maintenance = vehicle.maintenance || [];
+  const maintenance = vehicle.vehicle_maintenance || [];
 
+  // Main submit handler
   const handleSubmit = async () => {
-    if (!maintenanceType) {
+    if (!vehicle) return;
+
+    // Ensure type is never empty
+    const typeToSend =
+      maintenanceType === "other" && notes ? notes : maintenanceType;
+
+    if (!typeToSend) {
       toast({
         title: "Error",
-        description: "Please select a maintenance type",
+        description: "Maintenance type cannot be empty",
         variant: "destructive",
       });
       return;
     }
+
     if (!scheduledDate) {
       toast({
         title: "Error",
@@ -82,15 +91,18 @@ const MaintenanceDialog: React.FC<MaintenanceDialogProps> = ({
     try {
       await onSubmit({
         vehicle_id: vehicle.id,
-        type: maintenanceType,
+        type: typeToSend,
         date: scheduledDate,
         cost: estimatedCost ? parseFloat(estimatedCost) : 0,
         description: notes || "",
       });
+
       toast({
         title: "Success",
         description: "Maintenance scheduled successfully",
       });
+
+      // Reset form
       setMaintenanceType("");
       setScheduledDate("");
       setEstimatedCost("");
@@ -134,6 +146,25 @@ const MaintenanceDialog: React.FC<MaintenanceDialogProps> = ({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+
+                  // Validate before confirm
+                  if (!maintenanceType) {
+                    toast({
+                      title: "Error",
+                      description: "Please select a maintenance type",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  if (!scheduledDate) {
+                    toast({
+                      title: "Error",
+                      description: "Please select a scheduled date",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
                   setConfirmOpen(true);
                 }}
                 className='space-y-4'>
