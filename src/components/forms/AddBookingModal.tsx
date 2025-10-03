@@ -348,43 +348,57 @@ const AddBookingModal: React.FC<AddBookingModalProps> = ({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className='w-full p-0 bg-popover' align='start'>
-                  <Command>
+                  <Command shouldFilter={false}>
                     <CommandInput
                       placeholder='Search customers...'
                       value={customerSearchQuery}
-                      onValueChange={setCustomerSearchQuery}
+                      onValueChange={(val) => {
+                        setCustomerSearchQuery(val);
+                      }}
                     />
+
                     <CommandList>
-                      <CommandEmpty>
-                        {isSearching ? (
-                          <div className='flex items-center justify-center p-4'>
-                            <Loader2 className='h-4 w-4 animate-spin' />
-                            <span className='ml-2'>Searching...</span>
-                          </div>
-                        ) : (
+                      {isSearching && (
+                        <div className='flex items-center justify-center p-4'>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          <span className='ml-2'>Searching...</span>
+                        </div>
+                      )}
+
+                      {!isSearching && searchResults.length > 0 && (
+                        <CommandGroup>
+                          {searchResults.map((customer) => (
+                            <CommandItem
+                              key={customer.id}
+                              onSelect={() => handleCustomerSelect(customer)}>
+                              <div className='flex flex-col'>
+                                <span className='font-medium'>
+                                  {customer.name}
+                                </span>
+                                <span className='text-sm text-muted-foreground'>
+                                  {customer.custom_id} • {customer.email}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+
+                      {!isSearching &&
+                        searchResults.length === 0 &&
+                        customerSearchQuery.length >= 2 && (
                           <div className='p-4 text-sm text-muted-foreground'>
-                            {customerSearchQuery.length < 2
-                              ? "Type at least 2 characters to search"
-                              : "No customers found."}
+                            No customers found.
                           </div>
                         )}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {searchResults.map((customer) => (
-                          <CommandItem
-                            key={customer.id}
-                            onSelect={() => handleCustomerSelect(customer)}>
-                            <div className='flex flex-col'>
-                              <span className='font-medium'>
-                                {customer.name}
-                              </span>
-                              <span className='text-sm text-muted-foreground'>
-                                {customer.custom_id} • {customer.email}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+
+                      {!isSearching &&
+                        searchResults.length === 0 &&
+                        customerSearchQuery.length < 2 && (
+                          <div className='p-4 text-sm text-muted-foreground'>
+                            Type at least 2 characters to search
+                          </div>
+                        )}
                     </CommandList>
                   </Command>
                 </PopoverContent>

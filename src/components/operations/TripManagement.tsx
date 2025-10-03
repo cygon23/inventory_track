@@ -169,7 +169,7 @@ const TripManagement: React.FC<TripManagementProps> = ({ currentUser }) => {
           Trip Management
         </h1>
         <p className='text-muted-foreground'>
-          Monitor and coordinate all safari trips in real-time
+          Monitor and coordinate all safari trips in real-time..
         </p>
       </div>
 

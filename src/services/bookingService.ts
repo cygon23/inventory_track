@@ -354,31 +354,33 @@ class BookingService {
         }
     }
 
-    /**
-     * Search customers for autocomplete
-     */
-    async searchCustomers(
-        query: string,
-    ): Promise<{ data: Customer[] | null; error: any }> {
-        if (!query || query.length < 2) {
-            return { data: [], error: null }; // Don't search if query is too short
-        }
+   /**
+ * Search customers for autocomplete
+ */
+async searchCustomers(
+  query: string,
+): Promise<{ data: Customer[] | null; error: any }> {
+  if (!query || query.trim().length < 1) {
+    return { data: [], error: null };
+  }
 
-        try {
-            const search = `%${query}%`;
+  try {
+    const search = `%${query}%`;
 
-            const { data, error } = await supabase
-                .from("customers")
-                .select("id, custom_id, name, email, phone, country, status")
-                .or(`name.ilike.${search},email.ilike.${search},custom_id.ilike.${search}`)
-                .limit(10);
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, custom_id, name, email, phone, country, status")
+      .or(
+        `name.ilike.${search},email.ilike.${search},phone.ilike.${search},custom_id.ilike.${search}`
+      )
+      .limit(10);
+    return { data, error };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
 
-            return { data, error };
-        } catch (error) {
-            console.error("Error searching customers:", error);
-            return { data: null, error };
-        }
-    }
+
 
     /**
      * Get customer by custom_id (LT-XXXX)
