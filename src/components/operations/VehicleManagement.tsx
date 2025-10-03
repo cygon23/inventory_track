@@ -549,7 +549,6 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
               description: "Maintenance scheduled successfully",
             });
 
-            // 🔹 Key change: refresh **only this vehicle**
             const updatedVehicleResponse = await callVehicleFunction(
               "getVehicleById",
               {
@@ -561,7 +560,7 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({
               setSelectedVehicle(updatedVehicleResponse.vehicle);
             }
 
-            // 🔹 Optional: update entire list too
+            //update entire list too
             fetchVehicles();
 
             setIsMaintenanceOpen(false);
