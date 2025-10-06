@@ -17,9 +17,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Fuel,
   UserCheck,
+  Loader2,
 } from "lucide-react";
+import { useOperations } from "@/hooks/useOperations";
 import RealTimeMapDialog from "../modals/operational/RealTimeMapDialog";
 import ManageScheduleDialog from "../modals/operational/ManageScheduleDialog";
 import AssignDriverDialog from "../modals/operational/AssignDriverDialog";
@@ -29,6 +30,20 @@ import ViewTripDetailsDialog from "../modals/operational/ViewTripDetailsDialog";
 const OperationsDashboard: React.FC = () => {
   const currentUser = { name: "Operations Manager" };
 
+  // Fetch real data
+  const {
+    activeTrips,
+    drivers,
+    pendingTrips,
+    vehicles,
+    stats,
+    loading,
+    error,
+    assignTripResources,
+    updateDriverSchedule,
+    updateTripStatus,
+  } = useOperations();
+
   // Modal states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -36,155 +51,57 @@ const OperationsDashboard: React.FC = () => {
   const [isAutoAssignOpen, setIsAutoAssignOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<any>(null);
+  const [selectedDriver, setSelectedDriver] = useState<any>(null);
 
-  const stats = [
+  // Stats display configuration
+  const statsDisplay = [
     {
       title: "Active Trips",
-      value: "12",
-      change: "3 starting today",
+      value: stats.active_trips.toString(),
+      change: `${stats.active_trips} in progress`,
       icon: MapPin,
       color: "text-primary",
     },
     {
       title: "Available Drivers",
-      value: "8",
-      change: "2 on leave",
+      value: stats.available_drivers.toString(),
+      change: `${drivers.length - stats.available_drivers} on trip`,
       icon: UserCheck,
       color: "text-success",
     },
     {
       title: "Fleet Status",
-      value: "15/18",
-      change: "3 in maintenance",
+      value: `${stats.operational_vehicles}/${stats.total_vehicles}`,
+      change: `${stats.total_vehicles - stats.operational_vehicles} in use`,
       icon: Car,
       color: "text-warning",
     },
     {
       title: "Pending Assignments",
-      value: "5",
-      change: "2 urgent",
+      value: stats.pending_assignments.toString(),
+      change:
+        pendingTrips.filter((t) => t.priority === "urgent").length > 0
+          ? `${
+              pendingTrips.filter((t) => t.priority === "urgent").length
+            } urgent`
+          : "All scheduled",
       icon: Clock,
-      color: "text-destructive",
+      color:
+        stats.pending_assignments > 0 ? "text-destructive" : "text-success",
     },
   ];
 
-  const activeTrips = [
-    {
-      id: "SF001",
-      driver: "James Mollel",
-      customers: "Johnson Family",
-      route: "Serengeti Central",
-      status: "in_transit",
-      progress: 65,
-      nextStop: "Seronera Lodge",
-      estimatedArrival: "2:30 PM",
-      vehicle: "LC-001",
-    },
-    {
-      id: "SF002",
-      driver: "Mary Kileo",
-      customers: "Brown Couple",
-      route: "Ngorongoro Crater",
-      status: "game_drive",
-      progress: 40,
-      nextStop: "Crater Lodge",
-      estimatedArrival: "4:00 PM",
-      vehicle: "LC-002",
-    },
-    {
-      id: "SF003",
-      driver: "Peter Sanga",
-      customers: "Chen Group",
-      route: "Tarangire NP",
-      status: "lunch_break",
-      progress: 50,
-      nextStop: "Tarangire Lodge",
-      estimatedArrival: "5:30 PM",
-      vehicle: "LC-003",
-    },
-  ];
-
-  const pendingAssignments = [
-    {
-      id: "SF007",
-      customer: "Wilson Family",
-      package: "4-Day Northern Circuit",
-      startDate: "Tomorrow - 7:00 AM",
-      pickup: "Kilimanjaro Airport",
-      guests: 5,
-      preferredDriver: "James Mollel",
-      priority: "urgent",
-      requirements: "Child seats needed",
-    },
-    {
-      id: "SF008",
-      customer: "Anderson Group",
-      package: "3-Day Serengeti",
-      startDate: "Jan 17 - 6:30 AM",
-      pickup: "Arusha Hotel",
-      guests: 8,
-      preferredDriver: "Any available",
-      priority: "high",
-      requirements: "Photography equipment transport",
-    },
-  ];
-
-  const driverStatus = [
-    {
-      name: "James Mollel",
-      status: "on_trip",
-      currentTrip: "SF001",
-      location: "Serengeti Central",
-      nextAvailable: "5:00 PM",
-      rating: 4.9,
-      vehicle: "LC-001",
-    },
-    {
-      name: "Mary Kileo",
-      status: "on_trip",
-      currentTrip: "SF002",
-      location: "Ngorongoro",
-      nextAvailable: "6:00 PM",
-      rating: 4.8,
-      vehicle: "LC-002",
-    },
-    {
-      name: "Peter Sanga",
-      status: "on_trip",
-      currentTrip: "SF003",
-      location: "Tarangire",
-      nextAvailable: "7:00 PM",
-      rating: 4.7,
-      vehicle: "LC-003",
-    },
-    {
-      name: "Grace Mwamba",
-      status: "available",
-      currentTrip: null,
-      location: "Arusha Base",
-      nextAvailable: "Now",
-      rating: 4.9,
-      vehicle: "LC-004",
-    },
-    {
-      name: "John Kimaro",
-      status: "available",
-      currentTrip: null,
-      location: "Arusha Base",
-      nextAvailable: "Now",
-      rating: 4.6,
-      vehicle: "LC-005",
-    },
-  ];
-
+  // Get status badge colors
   const getStatusColor = (status: string) => {
     const colors = {
+      in_progress: "bg-primary/10 text-primary border-primary/20",
       in_transit: "bg-primary/10 text-primary border-primary/20",
       game_drive: "bg-success/10 text-success border-success/20",
       lunch_break: "bg-warning/10 text-warning border-warning/20",
       on_trip: "bg-primary/10 text-primary border-primary/20",
       available: "bg-success/10 text-success border-success/20",
       maintenance: "bg-destructive/10 text-destructive border-destructive/20",
+      on_leave: "bg-muted/10 text-muted-foreground border-muted/20",
     };
     return (
       colors[status as keyof typeof colors] ||
@@ -212,6 +129,73 @@ const OperationsDashboard: React.FC = () => {
       .join(" ");
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Tomorrow";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+  };
+
+  // Handle driver assignment
+const handleAssignDriver = async (
+  tripId: string,
+  driverId: string,
+  vehicleId: string
+) => {
+  if (!tripId || !driverId || !vehicleId) {
+    alert("Missing required information");
+    return;
+  }
+
+  try {
+    await assignTripResources(tripId, driverId, vehicleId);
+    setIsAssignOpen(false);
+    setSelectedTrip(null);
+  } catch (err) {
+    console.error("Assignment failed:", err);
+    alert(err instanceof Error ? err.message : "Failed to assign driver");
+  }
+};
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-96'>
+        <div className='text-center'>
+          <Loader2 className='h-12 w-12 animate-spin text-primary mx-auto mb-4' />
+          <p className='text-muted-foreground'>Loading operations data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className='flex items-center justify-center h-96'>
+        <Card className='safari-card max-w-md'>
+          <CardContent className='p-6 text-center'>
+            <AlertTriangle className='h-12 w-12 text-destructive mx-auto mb-4' />
+            <h3 className='text-lg font-semibold mb-2'>Error Loading Data</h3>
+            <p className='text-muted-foreground mb-4'>{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className='space-y-6'>
       {/* Welcome Header */}
@@ -227,7 +211,7 @@ const OperationsDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
-        {stats.map((stat, index) => {
+        {statsDisplay.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Card key={index} className='safari-card'>
@@ -273,60 +257,74 @@ const OperationsDashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className='space-y-4'>
-              {activeTrips.map((trip) => (
-                <div
-                  key={trip.id}
-                  className='p-4 border border-border rounded-lg space-y-3'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <div className='flex items-center space-x-2'>
-                        <h4 className='font-semibold text-sm sm:text-base'>
-                          {trip.customers}
-                        </h4>
-                        <Badge className={getStatusColor(trip.status)}>
-                          {formatStatus(trip.status)}
-                        </Badge>
+            {activeTrips.length === 0 ? (
+              <div className='text-center py-8 text-muted-foreground'>
+                <CheckCircle className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                <p>No active trips at the moment</p>
+              </div>
+            ) : (
+              <div className='space-y-4'>
+                {activeTrips.map((trip) => (
+                  <div
+                    key={trip.id}
+                    className='p-4 border border-border rounded-lg space-y-3'>
+                    <div className='flex items-center justify-between'>
+                      <div>
+                        <div className='flex items-center space-x-2'>
+                          <h4 className='font-semibold text-sm sm:text-base'>
+                            {trip.customer_name}
+                          </h4>
+                          <Badge className={getStatusColor(trip.status)}>
+                            {formatStatus(trip.status)}
+                          </Badge>
+                        </div>
+                        <p className='text-xs sm:text-sm text-muted-foreground'>
+                          Driver: {trip.driver_name || "Unassigned"} •{" "}
+                          {trip.vehicle_plate || "No vehicle"}
+                        </p>
                       </div>
-                      <p className='text-xs sm:text-sm text-muted-foreground'>
-                        Driver: {trip.driver} • {trip.vehicle}
-                      </p>
+                      <div className='text-right'>
+                        <p className='text-sm font-medium'>
+                          #{trip.id.slice(0, 8)}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {trip.current_location}
+                        </p>
+                      </div>
                     </div>
-                    <div className='text-right'>
-                      <p className='text-sm font-medium'>#{trip.id}</p>
-                      <p className='text-xs text-muted-foreground'>
-                        {trip.route}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className='space-y-2'>
-                    <div className='flex items-center justify-between text-sm'>
-                      <span>Progress</span>
-                      <span>{trip.progress}%</span>
+                    <div className='space-y-2'>
+                      <div className='flex items-center justify-between text-sm'>
+                        <span>Progress</span>
+                        <span>{trip.progress}%</span>
+                      </div>
+                      <div className='w-full bg-muted/50 rounded-full h-2'>
+                        <div
+                          className='bg-primary h-2 rounded-full transition-all duration-300'
+                          style={{ width: `${trip.progress}%` }}></div>
+                      </div>
                     </div>
-                    <div className='w-full bg-muted/50 rounded-full h-2'>
-                      <div
-                        className='bg-primary h-2 rounded-full transition-all duration-300'
-                        style={{ width: `${trip.progress}%` }}></div>
-                    </div>
-                  </div>
 
-                  <div className='flex items-center justify-between text-sm'>
-                    <div className='flex items-center space-x-2'>
-                      <MapPin className='h-4 w-4 text-primary' />
-                      <span>Next: {trip.nextStop}</span>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <Clock className='h-4 w-4 text-muted-foreground' />
-                      <span className='text-muted-foreground'>
-                        ETA: {trip.estimatedArrival}
-                      </span>
-                    </div>
+                    {trip.next_stop && (
+                      <div className='flex items-center justify-between text-sm'>
+                        <div className='flex items-center space-x-2'>
+                          <MapPin className='h-4 w-4 text-primary' />
+                          <span>Next: {trip.next_stop}</span>
+                        </div>
+                        {trip.estimated_arrival && (
+                          <div className='flex items-center space-x-2'>
+                            <Clock className='h-4 w-4 text-muted-foreground' />
+                            <span className='text-muted-foreground'>
+                              ETA: {trip.estimated_arrival}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -350,48 +348,54 @@ const OperationsDashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className='space-y-4'>
-              {driverStatus.map((driver) => (
-                <div
-                  key={driver.name}
-                  className='flex items-center justify-between p-3 border border-border rounded-lg'>
-                  <div className='flex items-center space-x-3'>
-                    <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
-                      <UserCheck className='h-5 w-5 text-primary' />
-                    </div>
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex items-center space-x-2'>
-                        <p className='font-medium text-sm'>{driver.name}</p>
-                        <Badge className={getStatusColor(driver.status)}>
-                          {formatStatus(driver.status)}
-                        </Badge>
+            {drivers.length === 0 ? (
+              <div className='text-center py-8 text-muted-foreground'>
+                <UserCheck className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                <p>No drivers found</p>
+              </div>
+            ) : (
+              <div className='space-y-4'>
+                {drivers.map((driver) => (
+                  <div
+                    key={driver.id}
+                    className='flex items-center justify-between p-3 border border-border rounded-lg'>
+                    <div className='flex items-center space-x-3'>
+                      <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
+                        <UserCheck className='h-5 w-5 text-primary' />
                       </div>
-                      <p className='text-xs text-muted-foreground'>
-                        {driver.currentTrip
-                          ? `Trip: ${driver.currentTrip}`
-                          : driver.location}{" "}
-                        • {driver.vehicle}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        ⭐ {driver.rating} • Available: {driver.nextAvailable}
-                      </p>
+                      <div className='min-w-0 flex-1'>
+                        <div className='flex items-center space-x-2'>
+                          <p className='font-medium text-sm'>{driver.name}</p>
+                          <Badge className={getStatusColor(driver.status)}>
+                            {formatStatus(driver.status)}
+                          </Badge>
+                        </div>
+                        <p className='text-xs text-muted-foreground'>
+                          {driver.status === "on_trip"
+                            ? `Trip: ${driver.current_trip_id?.slice(0, 8)}`
+                            : "Arusha Base"}{" "}
+                          {driver.vehicle_plate && `• ${driver.vehicle_plate}`}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          ⭐ {driver.average_rating.toFixed(1)} •{" "}
+                          {driver.total_trips} trips
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      disabled={driver.status === "on_trip"}
+                      onClick={() => {
+                        setSelectedDriver(driver);
+                        setIsAssignOpen(true);
+                      }}>
+                      {driver.status === "available" ? "Assign" : "Busy"}
+                    </Button>
                   </div>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => {
-                      setSelectedTrip({
-                        driver: driver.name,
-                        status: driver.status,
-                      });
-                      setIsAssignOpen(true);
-                    }}>
-                    Assign
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -407,6 +411,7 @@ const OperationsDashboard: React.FC = () => {
             <Button
               variant='outline'
               size='sm'
+              disabled={pendingTrips.length === 0}
               onClick={() => setIsAutoAssignOpen(true)}>
               Auto-Assign
             </Button>
@@ -416,77 +421,76 @@ const OperationsDashboard: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className='space-y-4'>
-            {pendingAssignments.map((assignment) => (
-              <div
-                key={assignment.id}
-                className='p-4 border border-border rounded-lg space-y-3'>
-                <div className='flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0'>
-                  <div>
-                    <div className='flex items-center space-x-2'>
-                      <h4 className='font-semibold text-sm sm:text-base'>
-                        {assignment.customer}
-                      </h4>
-                      <Badge className={getPriorityColor(assignment.priority)}>
-                        {assignment.priority}
-                      </Badge>
+          {pendingTrips.length === 0 ? (
+            <div className='text-center py-8 text-muted-foreground'>
+              <CheckCircle className='h-12 w-12 mx-auto mb-2 text-success opacity-50' />
+              <p>All trips are assigned!</p>
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              {pendingTrips.map((trip) => (
+                <div
+                  key={trip.id}
+                  className='p-4 border border-border rounded-lg space-y-3'>
+                  <div className='flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0'>
+                    <div>
+                      <div className='flex items-center space-x-2'>
+                        <h4 className='font-semibold text-sm sm:text-base'>
+                          {trip.customer_name}
+                        </h4>
+                        <Badge className={getPriorityColor(trip.priority)}>
+                          {trip.priority}
+                        </Badge>
+                      </div>
+                      <p className='text-xs sm:text-sm text-muted-foreground'>
+                        {trip.package_name}
+                      </p>
+                      <p className='text-xs text-muted-foreground'>
+                        #{trip.booking_reference} • {trip.guests} guests
+                      </p>
                     </div>
-                    <p className='text-xs sm:text-sm text-muted-foreground'>
-                      {assignment.package}
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      #{assignment.id} • {assignment.guests} guests
-                    </p>
+                    <div className='text-left sm:text-right'>
+                      <p className='text-sm font-medium'>
+                        {formatDate(trip.start_date)}
+                      </p>
+                      <p className='text-xs text-muted-foreground'>
+                        Starts: {new Date(trip.start_date).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className='text-left sm:text-right'>
-                    <p className='text-sm font-medium'>
-                      {assignment.startDate}
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Pickup: {assignment.pickup}
-                    </p>
-                  </div>
-                </div>
 
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
-                  <div>
-                    <p className='font-medium'>Preferred Driver</p>
-                    <p className='text-muted-foreground'>
-                      {assignment.preferredDriver}
-                    </p>
-                  </div>
-                  <div>
-                    <p className='font-medium'>Special Requirements</p>
-                    <p className='text-muted-foreground'>
-                      {assignment.requirements}
-                    </p>
-                  </div>
-                </div>
+                  {trip.notes && (
+                    <div className='bg-muted/50 p-2 rounded text-xs'>
+                      <span className='font-medium'>Notes: </span>
+                      {trip.notes}
+                    </div>
+                  )}
 
-                <div className='flex space-x-2'>
-                  <Button
-                    size='sm'
-                    className='flex-1'
-                    onClick={() => {
-                      setSelectedTrip(assignment);
-                      setIsAssignOpen(true);
-                    }}>
-                    Assign Driver
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    className='flex-1'
-                    onClick={() => {
-                      setSelectedTrip(assignment);
-                      setIsDetailsOpen(true);
-                    }}>
-                    View Details
-                  </Button>
+                  <div className='flex space-x-2'>
+                    <Button
+                      size='sm'
+                      className='flex-1'
+                      onClick={() => {
+                        setSelectedTrip(trip);
+                        setIsAssignOpen(true);
+                      }}>
+                      Assign Driver
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='flex-1'
+                      onClick={() => {
+                        setSelectedTrip(trip);
+                        setIsDetailsOpen(true);
+                      }}>
+                      View Details
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -494,33 +498,56 @@ const OperationsDashboard: React.FC = () => {
       <RealTimeMapDialog
         open={isMapOpen}
         onOpenChange={setIsMapOpen}
-        trips={activeTrips}
+        trips={activeTrips.map((trip) => ({
+          id: trip.id,
+          driver: trip.driver_name || "Unassigned",
+          customers: trip.customer_name,
+          route: trip.current_location || "In transit",
+          status: trip.status,
+          progress: trip.progress,
+          nextStop: trip.next_stop || "Unknown",
+          estimatedArrival: trip.estimated_arrival || "N/A",
+          vehicle: trip.vehicle_plate || "No vehicle",
+        }))}
       />
 
       <ManageScheduleDialog
         open={isScheduleOpen}
         onOpenChange={setIsScheduleOpen}
-        drivers={driverStatus}
+        drivers={drivers}
+        onUpdateSchedule={updateDriverSchedule}
       />
 
       <AssignDriverDialog
         open={isAssignOpen}
         onOpenChange={setIsAssignOpen}
         tripData={selectedTrip}
-        availableDrivers={driverStatus.filter((d) => d.status === "available")}
+        selectedDriver={selectedDriver}
+        availableDrivers={drivers.filter((d) => d.status === "available")}
+        availableVehicles={vehicles}
         onSubmit={(data) => {
-          console.log("Assign driver:", data);
-          // TODO: Implement assignment logic
+          handleAssignDriver(data.tripId, data.driverId, data.vehicleId);
         }}
       />
 
       <AutoAssignDialog
         open={isAutoAssignOpen}
         onOpenChange={setIsAutoAssignOpen}
-        pendingAssignments={pendingAssignments}
-        onSubmit={(selectedTrips) => {
-          console.log("Auto-assign trips:", selectedTrips);
-          // TODO: Implement auto-assignment logic
+        pendingAssignments={pendingTrips.map((trip) => ({
+          id: trip.id,
+          customer: trip.customer_name,
+          package: trip.package_name,
+          startDate: new Date(trip.start_date).toLocaleDateString(),
+          pickup: "Arusha", // Default pickup location
+          guests: trip.guests,
+          preferredDriver: "Any available",
+          priority: trip.priority,
+          requirements: trip.notes || "",
+        }))}
+        onSubmit={(selectedTripIds) => {
+          console.log("Selected trips for auto-assignment:", selectedTripIds);
+          setIsAutoAssignOpen(false);
+          alert("Auto-assignment feature coming soon!");
         }}
       />
 

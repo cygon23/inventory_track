@@ -46,13 +46,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        console.error("Error fetching user profile:", error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error("Error fetching user profile:", error);
       return null;
     }
   };
@@ -61,7 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     sbUser: SupabaseUser
   ): Promise<User | null> => {
     try {
-      console.log("AuthContext: Provisioning user profile for", sbUser.id);
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("users")
@@ -83,13 +80,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        console.error("Error provisioning user profile:", error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error("Error provisioning user profile:", error);
       return null;
     }
   };
@@ -100,9 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .from("users")
         .update({ last_login: new Date().toISOString() })
         .eq("id", userId);
-    } catch (error) {
-      console.error("Error updating last login:", error);
-    }
+    } catch (error) {}
   };
 
   const signIn = async (
@@ -182,7 +175,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(data);
       return { success: true };
     } catch (error) {
-      console.error("Update profile error:", error);
       return { success: false, error: "An unexpected error occurred" };
     }
   };
@@ -192,9 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userProfile = await fetchUserProfile(supabaseUser.id);
       if (userProfile) setUser(userProfile);
-    } catch (error) {
-      console.error("Error refreshing user:", error);
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {
@@ -224,17 +214,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             updateLastLogin(session.user.id).catch(console.error);
           } else {
             setUser(null);
-            console.warn("User profile inactive or missing on initAuth");
           }
         } else {
           setUser(null);
         }
       } catch (err) {
-        console.error("Error initializing auth:", err);
         setUser(null);
       } finally {
         if (mounted) {
-          console.log("AuthContext: Initial auth check complete");
           isInitializing = false;
           setLoading(false);
         }
@@ -244,25 +231,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("AuthContext: onAuthStateChange", {
-        event,
-        hasSession: !!session,
-        isInitializing,
-      });
-
       if (!mounted) return;
 
       if (isInitializing) {
-        console.log(
-          "AuthContext: Skipping event during initialization:",
-          event
-        );
         return;
       }
 
       const timeoutId = setTimeout(() => {
         if (mounted) {
-          console.warn("Auth state change timeout - forcing loading to false");
           setLoading(false);
         }
       }, 10000);
@@ -290,15 +266,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updateLastLogin(session.user.id).catch(console.error);
         } else {
           setUser(null);
-          console.warn("User profile inactive or missing onAuthStateChange");
         }
       } catch (err) {
-        console.error("Auth state change error:", err);
         setUser(null);
       } finally {
         clearTimeout(timeoutId);
         if (mounted) {
-          console.log("AuthContext: Auth state change complete");
           setLoading(false);
         }
       }

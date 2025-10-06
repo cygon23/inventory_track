@@ -96,7 +96,7 @@ const RealTimeMapDialog: React.FC<RealTimeMapDialogProps> = ({
                         </Badge>
                       </div>
                       <p className='text-xs text-muted-foreground'>
-                        Trip #{trip.id} • {trip.vehicle}
+                        Trip #{trip.id.slice(0, 8)} • {trip.vehicle}
                       </p>
                     </div>
                   </div>

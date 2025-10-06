@@ -35,7 +35,7 @@ interface PendingAssignment {
 interface AutoAssignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pendingAssignments: PendingAssignment[];
+  pendingAssignments: any[];
   onSubmit: (selectedTrips: string[]) => void;
 }
 
