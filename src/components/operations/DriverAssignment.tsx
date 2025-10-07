@@ -59,38 +59,60 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
     fetchDrivers();
   }, []);
 
-  const fetchDrivers = async () => {
-    setIsLoading(true);
-    setError(null);
+const fetchDrivers = async () => {
+  setIsLoading(true);
+  setError(null);
 
-    const { data, error: fetchError } = await driverService.getAllDrivers();
+  const { data, error: fetchError } = await driverService.getAllDrivers();
 
-    if (fetchError) {
-      setError(fetchError);
-    } else if (data) {
-      setDrivers(data);
-    }
+  if (fetchError) {
+    setError(fetchError);
+  } else if (data) {
+    const mappedDrivers = data.map((driver: any) => ({
+      ...driver,
+      status: driver.trips?.some((t: any) => t.status === "in_progress")
+        ? "on_trip"
+        : "available",
+      days_until_available:
+        driver.trips
+          ?.filter((t: any) => t.status === "in_progress")
+          .map((t: any) => {
+            if (t.end_date) {
+              const endDate = new Date(t.end_date);
+              const today = new Date();
+              return Math.max(
+                0,
+                Math.ceil(
+                  (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                )
+              );
+            }
+            return 0;
+          })[0] || 0,
+    }));
+    setDrivers(mappedDrivers);
+  }
 
-    setIsLoading(false);
-  };
+  setIsLoading(false);
+};
 
-  const handleAddDriver = async (driverData: any) => {
-    const { data, error } = await driverService.createDriver(driverData);
+const handleAddDriver = async (driverData: any) => {
+  const { data, error } = await driverService.createDriver(driverData);
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Error adding driver: ${error}`,
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Driver added successfully!",
-      });
-      fetchDrivers(); // Refresh the list
-    }
-  };
+  if (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: `Error adding driver: ${error}`,
+    });
+  } else {
+    toast({
+      title: "Success",
+      description: "Driver added successfully!",
+    });
+    setTimeout(() => fetchDrivers(), 1000);
+  }
+};
 
   const handleViewSchedule = async (driverId: string) => {
     const { data, error } = await driverService.getDriverById(driverId);
@@ -106,7 +128,7 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      active: "bg-success/10 text-success border-success/20",
+      available: "bg-success/10 text-success border-success/20",
       on_trip: "bg-primary/10 text-primary border-primary/20",
       on_leave: "bg-warning/10 text-warning border-warning/20",
       inactive: "bg-destructive/10 text-destructive border-destructive/20",
@@ -146,8 +168,8 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
       ) ||
       vehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilter =
-      filterStatus === "all" || driver.user?.status === filterStatus;
+      const matchesFilter =
+        filterStatus === "all" || driver.status === filterStatus;
 
     return matchesSearch && matchesFilter;
   });
@@ -158,18 +180,16 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
       title: "Total Drivers",
       value: drivers.length.toString(),
       change: `${
-        drivers.filter((d) => d.user?.status === "active").length
+        drivers.filter((d) => d.status === "available").length
       } available now`,
       icon: UserCheck,
       color: "text-primary",
     },
     {
       title: "On Active Trips",
-      value: drivers
-        .filter((d) => d.user?.status === "on_trip")
-        .length.toString(),
+      value: drivers.filter((d) => d.status === "on_trip").length.toString(),
       change: `${Math.round(
-        (drivers.filter((d) => d.user?.status === "on_trip").length /
+        (drivers.filter((d) => d.status === "on_trip").length /
           drivers.length) *
           100
       )}% utilization`,
@@ -178,9 +198,7 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
     },
     {
       title: "Available",
-      value: drivers
-        .filter((d) => d.user?.status === "active")
-        .length.toString(),
+      value: drivers.filter((d) => d.status === "available").length.toString(),
       change: "Ready for assignment",
       icon: CheckCircle,
       color: "text-success",
@@ -345,11 +363,8 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
                             <h3 className='font-semibold text-lg'>
                               {driver.user?.name || "Unknown"}
                             </h3>
-                            <Badge
-                              className={getStatusColor(
-                                driver.user?.status || "inactive"
-                              )}>
-                              {formatStatus(driver.user?.status || "inactive")}
+                            <Badge className={getStatusColor(driver.status)}>
+                              {formatStatus(driver.status)}
                             </Badge>
                           </div>
                           <div className='flex items-center space-x-4 text-sm text-muted-foreground'>
@@ -425,40 +440,38 @@ const DriverAssignment: React.FC<DriverAssignmentProps> = ({ currentUser }) => {
                       </div>
                     </div>
 
-                    <div className='flex flex-col space-y-3 text-sm'>
-                      {driver.user?.status === "active" ? (
-                        <div className='bg-success/10 p-3 rounded-lg'>
-                          <p className='font-medium text-success'>
-                            Available Now
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Ready for assignment
-                          </p>
-                        </div>
-                      ) : (
-                        <div className='bg-primary/10 p-3 rounded-lg'>
-                          <p className='font-medium'>Status</p>
-                          <p className='text-muted-foreground'>
-                            {formatStatus(driver.user?.status || "inactive")}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className='flex space-x-2'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='flex-1'
-                          onClick={() => handleViewSchedule(driver.id)}>
-                          View Schedule
-                        </Button>
-
-                        {driver.user?.status === "active" && (
-                          <Button size='sm' className='flex-1'>
-                            Assign Trip
-                          </Button>
-                        )}
+                    {driver.status === "available" ? (
+                      <div className='bg-success/10 p-3 rounded-lg'>
+                        <p className='font-medium text-success'>
+                          Available Now
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          Ready for assignment
+                        </p>
                       </div>
+                    ) : (
+                      <div className='bg-primary/10 p-3 rounded-lg'>
+                        <p className='font-medium'>Status</p>
+                        <p className='text-muted-foreground'>
+                          {formatStatus(driver.status)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className='flex space-x-2'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='flex-1'
+                        onClick={() => handleViewSchedule(driver.id)}>
+                        View Schedule
+                      </Button>
+
+                      {driver.status === "available" && (
+                        <Button size='sm' className='flex-1'>
+                          Assign Trip
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

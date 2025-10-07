@@ -97,13 +97,14 @@ serve(async (req) => {
       }
 
       // ---------------- GET ALL DRIVERS ----------------
-      case "getAllDrivers": {
+     case "getAllDrivers": {
         const { data: drivers, error } = await supabase
           .from("drivers")
           .select(`
             *,
             user:users(id, email, name, phone, role, status),
-            vehicle:vehicles(id, model, plate, year)
+            vehicle:vehicles(id, model, plate, year),
+            trips!trips_driver_id_fkey(id, status, end_date)
           `)
           .order("created_at", { ascending: false });
         if (error) throw error;
