@@ -37,6 +37,20 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
+
+function getRolePrefix(role: string): string {
+  const prefixMap: { [key: string]: string } = {
+    super_admin: "admin",
+    admin: "admin",
+    booking_manager: "booking",
+    operations_coordinator: "operations",
+    driver: "driver",
+    finance_officer: "finance",
+    customer_service: "support",
+  };
+  return prefixMap[role] || "admin";
+}
+
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -207,17 +221,5 @@ const App = () => {
   );
 };
 
-function getRolePrefix(role: string): string {
-  const prefixMap: { [key: string]: string } = {
-    super_admin: "admin",
-    admin: "admin",
-    booking_manager: "booking",
-    operations_coordinator: "operations",
-    driver: "driver",
-    finance_officer: "finance",
-    customer_service: "support",
-  };
-  return prefixMap[role] || "admin";
-}
 
 export default App;

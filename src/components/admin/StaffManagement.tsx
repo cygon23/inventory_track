@@ -297,7 +297,7 @@ const StaffManagement: React.FC = () => {
       phone: user.phone || '',
       role: user.role,
       assigned_region: user.assigned_region || '',
-      permissions: user.permissions,
+     permissions: user.permissions || [],
       is_active: user.is_active
     });
     setIsEditDialogOpen(true);
@@ -305,11 +305,11 @@ const StaffManagement: React.FC = () => {
 
   // Handle permission toggle
   const handlePermissionToggle = (permission: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter(p => p !== permission)
-        : [...prev.permissions, permission]
+      permissions: (prev.permissions || []).includes(permission)
+        ? (prev.permissions || []).filter((p) => p !== permission)
+        : [...(prev.permissions || []), permission],
     }));
   };
 
@@ -369,168 +369,224 @@ const StaffManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className='space-y-6'>
+      <div className='flex justify-between items-center'>
         <div>
-          <h1 className="text-3xl font-bold">Staff Management</h1>
-          <p className="text-muted-foreground">Manage staff members, roles, and permissions</p>
+          <h1 className='text-3xl font-bold'>Staff Management</h1>
+          <p className='text-muted-foreground'>
+            Manage staff members, roles, and permissions
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className='w-4 h-4 mr-2' />
               Add Staff Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
             <DialogHeader>
               <DialogTitle>Add New Staff Member</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="Enter full name" 
+              <div className='grid grid-cols-2 gap-4 mt-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='name'>Full Name *</Label>
+                  <Input
+                    id='name'
+                    placeholder='Enter full name'
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="Enter email address" 
+                <div className='space-y-2'>
+                  <Label htmlFor='email'>Email Address *</Label>
+                  <Input
+                    id='email'
+                    type='email'
+                    placeholder='Enter email address'
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
                     required
                   />
                 </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="Enter initial password" 
-                  value={(formData as any).password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                />
-              </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input 
-                    id="phone" 
-                    placeholder="Enter phone number" 
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                <div className='space-y-2'>
+                  <Label htmlFor='password'>Password *</Label>
+                  <Input
+                    id='password'
+                    type='password'
+                    placeholder='Enter initial password'
+                    value={(formData as any).password}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
+                    }
+                    required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select 
-                    value={formData.role} 
+                <div className='space-y-2'>
+                  <Label htmlFor='phone'>Phone Number</Label>
+                  <Input
+                    id='phone'
+                    placeholder='Enter phone number'
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='role'>Role *</Label>
+                  <Select
+                    value={formData.role}
                     onValueChange={(value) => {
-                      setFormData(prev => ({ 
-                        ...prev, 
+                      setFormData((prev) => ({
+                        ...prev,
                         role: value,
-                        permissions: roleDefinitions[value as keyof typeof roleDefinitions]?.permissions || []
+                        permissions:
+                          roleDefinitions[value as keyof typeof roleDefinitions]
+                            ?.permissions || [],
                       }));
-                    }}
-                  >
+                    }}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
+                      <SelectValue placeholder='Select role' />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(roleDefinitions)
-                        .filter(([key]) => isSuperAdmin() || key !== 'super_admin')
+                        .filter(
+                          ([key]) => isSuperAdmin() || key !== "super_admin"
+                        )
                         .map(([key, role]) => (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{role.label}</span>
-                            <span className="text-sm text-muted-foreground">{role.description}</span>
-                          </div>
+                          <SelectItem key={key} value={key}>
+                            <div className='flex flex-col'>
+                              <span className='font-medium'>{role.label}</span>
+                              <span className='text-sm text-muted-foreground'>
+                                {role.description}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='region'>Assigned Region</Label>
+                  <Select
+                    value={formData.assigned_region || "none"}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        assigned_region: value === "none" ? "" : value,
+                      }))
+                    }>
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select region' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='none'>No specific region</SelectItem>
+                      {regions.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {region}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="region">Assigned Region</Label>
-                  <Select 
-                    value={formData.assigned_region || 'none'} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value === 'none' ? '' : value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No specific region</SelectItem>
-                      {regions.map(region => (
-                        <SelectItem key={region} value={region}>{region}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="is_active" 
+                <div className='space-y-2'>
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='is_active'
                       checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked as boolean }))}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          is_active: checked as boolean,
+                        }))
+                      }
                     />
-                    <Label htmlFor="is_active">Active User</Label>
+                    <Label htmlFor='is_active'>Active User</Label>
                   </div>
                 </div>
               </div>
-              
-              <div className="mt-6">
-                <Label className="text-base font-medium">Permissions</Label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Permissions are automatically set based on the selected role. You can customize them below.
+
+              <div className='mt-6'>
+                <Label className='text-base font-medium'>Permissions</Label>
+                <p className='text-sm text-muted-foreground mb-3'>
+                  Permissions are automatically set based on the selected role.
+                  You can customize them below.
                 </p>
-                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                <div className='grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3'>
                   {[
-                    'dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 
-                    'forensic', 'attendance', 'trips', 'drivers', 'vehicles', 'payments', 
-                    'invoices', 'support', 'faq', 'my_trips'
-                  ].map(permission => (
-                    <div key={permission} className="flex items-center space-x-2">
-                      <Checkbox 
+                    "dashboard",
+                    "messages",
+                    "customers",
+                    "bookings",
+                    "staff",
+                    "reports",
+                    "forensic",
+                    "attendance",
+                    "trips",
+                    "drivers",
+                    "vehicles",
+                    "payments",
+                    "invoices",
+                    "support",
+                    "faq",
+                    "my_trips",
+                  ].map((permission) => (
+                    <div
+                      key={permission}
+                      className='flex items-center space-x-2'>
+                      <Checkbox
                         id={permission}
-                        checked={formData.permissions.includes(permission)}
-                        onCheckedChange={() => handlePermissionToggle(permission)}
+                        checked={(formData.permissions || []).includes(
+                          permission
+                        )}
+                        onCheckedChange={() =>
+                          handlePermissionToggle(permission)
+                        }
                       />
-                      <Label htmlFor={permission} className="text-sm capitalize">
-                        {permission.replace('_', ' ')}
+                      <Label
+                        htmlFor={permission}
+                        className='text-sm capitalize'>
+                        {permission.replace("_", " ")}
                       </Label>
                     </div>
                   ))}
                 </div>
               </div>
-              
-              <DialogFooter className="mt-6">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+
+              <DialogFooter className='mt-6'>
+                <Button
+                  type='button'
+                  variant='outline'
                   onClick={() => {
                     setIsAddDialogOpen(false);
                     resetForm();
-                  }}
-                >
+                  }}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type='submit' disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                       Creating...
                     </>
                   ) : (
-                    'Create Staff Member'
+                    "Create Staff Member"
                   )}
                 </Button>
               </DialogFooter>
@@ -540,14 +596,16 @@ const StaffManagement: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
         {stats.map((stat, index) => (
           <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className='p-6'>
+              <div className='flex items-center justify-between'>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+                  <p className='text-sm font-medium text-muted-foreground'>
+                    {stat.title}
+                  </p>
+                  <p className='text-3xl font-bold'>{stat.value}</p>
                 </div>
                 <stat.icon className={`w-8 h-8 ${stat.color}`} />
               </div>
@@ -556,35 +614,39 @@ const StaffManagement: React.FC = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="all-staff" className="w-full">
+      <Tabs defaultValue='all-staff' className='w-full'>
         <TabsList>
-          <TabsTrigger value="all-staff">All Staff</TabsTrigger>
-          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value='all-staff'>All Staff</TabsTrigger>
+          <TabsTrigger value='roles'>Roles & Permissions</TabsTrigger>
+          <TabsTrigger value='attendance'>Attendance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all-staff" className="space-y-6">
+        <TabsContent value='all-staff' className='space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>Staff Members</CardTitle>
-              <div className="flex space-x-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className='flex space-x-4'>
+                <div className='relative flex-1'>
+                  <Search className='absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
                   <Input
-                    placeholder="Search staff members..."
+                    placeholder='Search staff members...'
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className='pl-10'
                   />
                 </div>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by region" />
+                <Select
+                  value={selectedDepartment}
+                  onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className='w-48'>
+                    <SelectValue placeholder='Filter by region' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Regions</SelectItem>
-                    {regions.map(region => (
-                      <SelectItem key={region} value={region.toLowerCase()}>{region}</SelectItem>
+                    <SelectItem value='all'>All Regions</SelectItem>
+                    {regions.map((region) => (
+                      <SelectItem key={region} value={region.toLowerCase()}>
+                        {region}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -606,57 +668,67 @@ const StaffManagement: React.FC = () => {
                   {filteredStaff.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell>
-                        <div className="flex items-center space-x-3">
+                        <div className='flex items-center space-x-3'>
                           <Avatar>
-                            <AvatarImage src={member.avatar || ''} />
+                            <AvatarImage src={member.avatar || ""} />
                             <AvatarFallback>
-                              {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              {member.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{member.name}</p>
-                            <p className="text-sm text-muted-foreground">{member.email}</p>
+                            <p className='font-medium'>{member.name}</p>
+                            <p className='text-sm text-muted-foreground'>
+                              {member.email}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {roleDefinitions[member.role as keyof typeof roleDefinitions]?.label || member.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{member.assigned_region || 'No region'}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.is_active ? 'default' : 'secondary'}>
-                          {member.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant='outline'>
+                          {roleDefinitions[
+                            member.role as keyof typeof roleDefinitions
+                          ]?.label || member.role}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never'}
+                        {member.assigned_region || "No region"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleEditUser(member)}
-                          >
-                            <Edit className="w-4 h-4" />
+                        <Badge
+                          variant={member.is_active ? "default" : "secondary"}>
+                          {member.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {member.last_login
+                          ? new Date(member.last_login).toLocaleDateString()
+                          : "Never"}
+                      </TableCell>
+                      <TableCell>
+                        <div className='flex space-x-2'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => handleEditUser(member)}>
+                            <Edit className='w-4 h-4' />
                           </Button>
                           {member.is_active ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => deactivateStaffMember(member.id)}
-                            >
-                              <EyeOff className="w-4 h-4" />
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => deactivateStaffMember(member.id)}>
+                              <EyeOff className='w-4 h-4' />
                             </Button>
                           ) : (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => reactivateStaffMember(member.id)}
-                            >
-                              <Eye className="w-4 h-4" />
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => reactivateStaffMember(member.id)}>
+                              <Eye className='w-4 h-4' />
                             </Button>
                           )}
                         </div>
@@ -669,26 +741,31 @@ const StaffManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="roles" className="space-y-6">
+        <TabsContent value='roles' className='space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>Role Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 {Object.entries(roleDefinitions).map(([key, role]) => (
                   <Card key={key}>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2">{role.label}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
+                    <CardContent className='p-4'>
+                      <h3 className='font-semibold mb-2'>{role.label}</h3>
+                      <p className='text-sm text-muted-foreground mb-3'>
                         {role.description}
                       </p>
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">Permissions:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {role.permissions.map(permission => (
-                            <Badge key={permission} variant="secondary" className="text-xs">
-                              {permission.replace('_', ' ')}
+                      <div className='space-y-2'>
+                        <p className='text-xs font-medium text-muted-foreground'>
+                          Permissions:
+                        </p>
+                        <div className='flex flex-wrap gap-1'>
+                          {role.permissions.map((permission) => (
+                            <Badge
+                              key={permission}
+                              variant='secondary'
+                              className='text-xs'>
+                              {permission.replace("_", " ")}
                             </Badge>
                           ))}
                         </div>
@@ -701,16 +778,18 @@ const StaffManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="attendance" className="space-y-6">
+        <TabsContent value='attendance' className='space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>Attendance Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Attendance Tracking</h3>
-                <p className="text-muted-foreground">
+              <div className='text-center py-8'>
+                <Clock className='w-12 h-12 mx-auto text-muted-foreground mb-4' />
+                <h3 className='text-lg font-semibold mb-2'>
+                  Attendance Tracking
+                </h3>
+                <p className='text-muted-foreground'>
                   Attendance tracking features coming soon
                 </p>
               </div>
@@ -721,145 +800,184 @@ const StaffManagement: React.FC = () => {
 
       {/* Edit Staff Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>Edit Staff Member</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name *</Label>
-                <Input 
-                  id="edit-name" 
-                  placeholder="Enter full name" 
+            <div className='grid grid-cols-2 gap-4 mt-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='edit-name'>Full Name *</Label>
+                <Input
+                  id='edit-name'
+                  placeholder='Enter full name'
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email Address *</Label>
-                <Input 
-                  id="edit-email" 
-                  type="email" 
-                  placeholder="Enter email address" 
+              <div className='space-y-2'>
+                <Label htmlFor='edit-email'>Email Address *</Label>
+                <Input
+                  id='edit-email'
+                  type='email'
+                  placeholder='Enter email address'
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone Number</Label>
-                <Input 
-                  id="edit-phone" 
-                  placeholder="Enter phone number" 
+              <div className='space-y-2'>
+                <Label htmlFor='edit-phone'>Phone Number</Label>
+                <Input
+                  id='edit-phone'
+                  placeholder='Enter phone number'
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Role *</Label>
-                <Select 
-                  value={formData.role} 
+              <div className='space-y-2'>
+                <Label htmlFor='edit-role'>Role *</Label>
+                <Select
+                  value={formData.role}
                   onValueChange={(value) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
+                    setFormData((prev) => ({
+                      ...prev,
                       role: value,
-                      permissions: roleDefinitions[value as keyof typeof roleDefinitions]?.permissions || []
+                      permissions:
+                        roleDefinitions[value as keyof typeof roleDefinitions]
+                          ?.permissions || [],
                     }));
-                  }}
-                >
+                  }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder='Select role' />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(roleDefinitions)
-                      .filter(([key]) => isSuperAdmin() || key !== 'super_admin')
+                      .filter(
+                        ([key]) => isSuperAdmin() || key !== "super_admin"
+                      )
                       .map(([key, role]) => (
-                      <SelectItem key={key} value={key}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{role.label}</span>
-                          <span className="text-sm text-muted-foreground">{role.description}</span>
-                        </div>
+                        <SelectItem key={key} value={key}>
+                          <div className='flex flex-col'>
+                            <span className='font-medium'>{role.label}</span>
+                            <span className='text-sm text-muted-foreground'>
+                              {role.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='edit-region'>Assigned Region</Label>
+                <Select
+                  value={formData.assigned_region || "none"}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      assigned_region: value === "none" ? "" : value,
+                    }))
+                  }>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select region' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='none'>No specific region</SelectItem>
+                    {regions.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {region}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-region">Assigned Region</Label>
-                <Select 
-                  value={formData.assigned_region || 'none'} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_region: value === 'none' ? '' : value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select region" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No specific region</SelectItem>
-                    {regions.map(region => (
-                      <SelectItem key={region} value={region}>{region}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-is_active" 
+              <div className='space-y-2'>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='edit-is_active'
                     checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked as boolean }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        is_active: checked as boolean,
+                      }))
+                    }
                   />
-                  <Label htmlFor="edit-is_active">Active User</Label>
+                  <Label htmlFor='edit-is_active'>Active User</Label>
                 </div>
               </div>
             </div>
-            
-            <div className="mt-6">
-              <Label className="text-base font-medium">Permissions</Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Permissions are automatically set based on the selected role. You can customize them below.
+
+            <div className='mt-6'>
+              <Label className='text-base font-medium'>Permissions</Label>
+              <p className='text-sm text-muted-foreground mb-3'>
+                Permissions are automatically set based on the selected role.
+                You can customize them below.
               </p>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+              <div className='grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3'>
                 {[
-                  'dashboard', 'messages', 'customers', 'bookings', 'staff', 'reports', 
-                  'forensic', 'attendance', 'trips', 'drivers', 'vehicles', 'payments', 
-                  'invoices', 'support', 'faq', 'my_trips'
-                ].map(permission => (
-                  <div key={permission} className="flex items-center space-x-2">
-                    <Checkbox 
+                  "dashboard",
+                  "messages",
+                  "customers",
+                  "bookings",
+                  "staff",
+                  "reports",
+                  "forensic",
+                  "attendance",
+                  "trips",
+                  "drivers",
+                  "vehicles",
+                  "payments",
+                  "invoices",
+                  "support",
+                  "faq",
+                  "my_trips",
+                ].map((permission) => (
+                  <div key={permission} className='flex items-center space-x-2'>
+                    <Checkbox
                       id={`edit-${permission}`}
-                      checked={formData.permissions.includes(permission)}
+                      checked={(formData.permissions || []).includes(
+                        permission
+                      )}
                       onCheckedChange={() => handlePermissionToggle(permission)}
                     />
-                    <Label htmlFor={`edit-${permission}`} className="text-sm capitalize">
-                      {permission.replace('_', ' ')}
+                    <Label
+                      htmlFor={`edit-${permission}`}
+                      className='text-sm capitalize'>
+                      {permission.replace("_", " ")}
                     </Label>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <DialogFooter className="mt-6">
-              <Button 
-                type="button" 
-                variant="outline" 
+
+            <DialogFooter className='mt-6'>
+              <Button
+                type='button'
+                variant='outline'
                 onClick={() => {
                   setIsEditDialogOpen(false);
                   setEditingUser(null);
                   resetForm();
-                }}
-              >
+                }}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type='submit' disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     Updating...
                   </>
                 ) : (
-                  'Update Staff Member'
+                  "Update Staff Member"
                 )}
               </Button>
             </DialogFooter>

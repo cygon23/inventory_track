@@ -30,7 +30,7 @@ export interface Database {
           avatar: string | null
           is_active: boolean
           last_login: string | null
-          permissions: string[]
+          permissions: string[]  | null 
           assigned_region: string | null
           phone: string | null
           created_at: string
@@ -44,7 +44,7 @@ export interface Database {
           avatar?: string | null
           is_active?: boolean
           last_login?: string | null
-          permissions?: string[]
+          permissions?: string[]  | null 
           assigned_region?: string | null
           phone?: string | null
           created_at?: string
@@ -58,7 +58,7 @@ export interface Database {
           avatar?: string | null
           is_active?: boolean
           last_login?: string | null
-          permissions?: string[]
+          permissions?: string[]  | null 
           assigned_region?: string | null
           phone?: string | null
           created_at?: string
