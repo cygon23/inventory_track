@@ -15,17 +15,27 @@ export async function fetchTripReports(
     filters?: TripReportFilters,
 ): Promise<ApiResponse<TripReport[]>> {
     try {
-        let query = supabase
-            .from("trip_reports")
-            .select(`
+       //  get driver's table ID from user_id
+const { data: driver } = await supabase
+    .from("drivers")
+    .select("id")
+    .eq("user_id", driverId)
+    .single();
+
+if (!driver) {
+    return { data: [], error: null };
+}
+
+let query = supabase
+    .from("trip_reports")
+    .select(`
         *,
         trip:trips!trip_reports_trip_id_fkey(
           customer_name,
           package_name
         )
       `)
-            .eq("driver_id", driverId)
-            .order("completion_date", { ascending: false });
+    .eq("driver_id", driver.id)
 
         // Apply date filters
         if (filters?.dateFilter && filters.dateFilter !== "all") {
@@ -133,11 +143,22 @@ export async function fetchMonthlyStats(
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
+        // Get driver's table ID
+        const { data: driver } = await supabase
+            .from("drivers")
+            .select("id, on_time_percentage")
+            .eq("user_id", driverId)
+            .single();
+
+        if (!driver) {
+            return { data: null, error: new Error("Driver not found") };
+        }
+
         // Get monthly reports
         const { data: reports, error: reportsError } = await supabase
             .from("trip_reports")
             .select("*")
-            .eq("driver_id", driverId)
+            .eq("driver_id", driver.id)
             .gte("completion_date", firstDay.toISOString().split("T")[0])
             .lte("completion_date", lastDay.toISOString().split("T")[0]);
 
@@ -156,22 +177,13 @@ export async function fetchMonthlyStats(
         ).length || 0;
         const averageRating = ratingsCount > 0 ? ratingsSum / ratingsCount : 0;
 
-        // Get on-time performance from driver stats
-        const { data: driver, error: driverError } = await supabase
-            .from("drivers")
-            .select("on_time_percentage")
-            .eq("id", driverId)
-            .maybeSingle();
-
-        if (driverError) throw driverError;
-
         const stats: MonthlyStats = {
             totalTrips,
             totalDistance: `${totalDistance.toFixed(0)} km`,
             totalFuel: `${totalFuel.toFixed(0)} liters`,
             averageRating: Number(averageRating.toFixed(1)),
-            totalRevenue: "$0", // Calculate based on your business logic
-            onTimePerformance: `${driver?.on_time_percentage || 0}%`,
+            totalRevenue: "$0",
+            onTimePerformance: `${driver.on_time_percentage || 0}%`,
         };
 
         return { data: stats, error: null };
@@ -180,7 +192,6 @@ export async function fetchMonthlyStats(
         return { data: null, error: error as Error };
     }
 }
-
 // =====================================================
 // UPDATE TRIP REPORT
 // =====================================================

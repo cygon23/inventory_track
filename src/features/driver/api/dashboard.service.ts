@@ -152,13 +152,6 @@ export async function fetchDashboardStats(driverId: string) {
             vehicleWithStats = tripAssignedVehicle;
         }
 
-        console.log("🔍 Vehicle lookup results:", {
-            driverRecordId: driverRecord?.id,
-            currentTripVehicleId: currentTrip?.vehicle_id,
-            currentTripId: currentTrip?.id,
-            foundVehicle: vehicleWithStats,
-        });
-
         return {
             data: {
                 todayTrips: todayTrips || [],

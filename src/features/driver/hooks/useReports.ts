@@ -1,5 +1,3 @@
-// src/features/driver/hooks/useReports.ts
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     createTripReport,
@@ -12,6 +10,8 @@ import type {
     CreateTripReportData,
     TripReportFilters,
 } from "../types/dashboard.types";
+import { fetchDriverTrips } from "../../driver/api/trips.api"; 
+import { supabase } from "@/lib/supabase";
 
 // =====================================================
 // FETCH TRIP REPORTS HOOK
@@ -46,6 +46,20 @@ export function useMonthlyStats(driverId: string) {
 // =====================================================
 // CREATE TRIP REPORT HOOK
 // =====================================================
+export function useDriverTripsForReports(driverId: string) {
+  return useQuery({
+    queryKey: ["driverTripsForReports", driverId],
+    queryFn: async () => {
+      const result = await fetchDriverTrips(driverId); 
+      if (result.error) throw result.error;
+      return result.data;
+    },
+    staleTime: 60000,
+  });
+}
+
+
+
 export function useCreateTripReport() {
     const queryClient = useQueryClient();
 
@@ -54,15 +68,26 @@ export function useCreateTripReport() {
             driverId,
             reportData,
         }: {
-            driverId: string;
+            driverId: string; // This is user_id from auth
             reportData: CreateTripReportData;
         }) => {
-            const result = await createTripReport(driverId, reportData);
+            // STEP 1: Get driver's record ID from drivers table
+            const { data: driver, error: driverError } = await supabase
+                .from("drivers")
+                .select("id")
+                .eq("user_id", driverId)
+                .single();
+
+            if (driverError || !driver) {
+                throw new Error("Driver record not found in database");
+            }
+
+            // STEP 2: Create report with the driver's table ID
+            const result = await createTripReport(driver.id, reportData);
             if (result.error) throw result.error;
             return result.data;
         },
         onSuccess: (_, variables) => {
-            // Invalidate and refetch
             queryClient.invalidateQueries({
                 queryKey: ["tripReports", variables.driverId],
             });

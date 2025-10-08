@@ -53,19 +53,18 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
-import { User } from "@/data/mockUsers";
 import {
   useTripReports,
   useMonthlyStats,
   useCreateTripReport,
   useDeleteTripReport,
+  useDriverTripsForReports,
 } from "@/features/driver/hooks/useReports";
 import type {
   CreateTripReportData,
   TripReportFilters,
   TripExpenses,
 } from "@/features/driver/types/dashboard.types";
-
 
 const TripReports: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -83,6 +82,7 @@ const TripReports: React.FC = () => {
     "all" | "this-month" | "last-month" | "this-year"
   >("all");
   const [isNewReportOpen, setIsNewReportOpen] = useState(false);
+  const { data: completedTrips } = useDriverTripsForReports(currentUser.id);
 
   // Form state for new report
   const [formData, setFormData] = useState<Partial<CreateTripReportData>>({
@@ -256,29 +256,32 @@ const TripReports: React.FC = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className='grid gap-4 py-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='booking-ref'>Booking Reference *</Label>
-                    <Input
-                      id='booking-ref'
-                      placeholder='SAF-2024-XXX'
-                      value={formData.booking_ref}
-                      onChange={(e) =>
-                        updateFormField("booking_ref", e.target.value)
+                <div className='space-y-2'>
+                  <Label htmlFor='trip-select'>Select Completed Trip *</Label>
+                  <Select
+                    value={formData.trip_id}
+                    onValueChange={(tripId) => {
+                      const trip = completedTrips?.find((t) => t.id === tripId);
+                      if (trip?.booking) {
+                        updateFormField("trip_id", tripId);
+                        updateFormField(
+                          "booking_ref",
+                          trip.booking.booking_reference
+                        );
                       }
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='trip-id'>Trip ID *</Label>
-                    <Input
-                      id='trip-id'
-                      placeholder='Trip UUID'
-                      value={formData.trip_id}
-                      onChange={(e) =>
-                        updateFormField("trip_id", e.target.value)
-                      }
-                    />
-                  </div>
+                    }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select a trip' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {completedTrips?.map((trip) => (
+                        <SelectItem key={trip.id} value={trip.id}>
+                          {trip.booking?.booking_reference} -{" "}
+                          {trip.booking?.customer_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-2'>
