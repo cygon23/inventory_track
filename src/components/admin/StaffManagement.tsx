@@ -15,6 +15,13 @@ import { Search, Plus, Edit, Trash2, Users, UserCheck, Clock, AlertTriangle, Loa
 import { useAuth, useRole } from '@/contexts/AuthContext';
 import { supabase, User, UserInsert, UserUpdate } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { format } from "date-fns";
+import {
+  useMyAttendance,
+  useAttendanceByDate,
+  useAttendanceStats,
+} from "../../features/driver/hooks/useAttendance";
+import { getDepartmentFromRole } from "../../features/driver/api/attendance.service";
 
 const StaffManagement: React.FC = () => {
   const { user: currentUser, refreshUser } = useAuth();
@@ -28,6 +35,18 @@ const StaffManagement: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+// Attendance hooks
+const today = format(new Date(), "yyyy-MM-dd");
+const { data: myAttendance, isLoading: myLoading } = useMyAttendance(
+  currentUser?.id || '',
+  today
+);
+const { data: attendanceRecords, isLoading: recordsLoading } = useAttendanceByDate(
+  today,
+  (isSuperAdmin() || isAdmin()) ? {} : undefined
+);
+const { data: attendanceStats, isLoading: statsLoading } = useAttendanceStats(today);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -89,6 +108,29 @@ const StaffManagement: React.FC = () => {
     'Arusha', 'Serengeti', 'Ngorongoro', 'Tarangire', 'Lake Manyara', 
     'Kilimanjaro', 'Northern Circuit', 'Southern Circuit'
   ];
+
+  // Helper functions for attendance
+const getStatusColor = (status: string) => {
+  const colors = {
+    present: "bg-green-100 text-green-800 border-green-200",
+    late: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    absent: "bg-red-100 text-red-800 border-red-200",
+    working: "bg-blue-100 text-blue-800 border-blue-200",
+    halfday: "bg-purple-100 text-purple-800 border-purple-200",
+  };
+  return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
+};
+
+const formatStatus = (status: string) => {
+  const statusMap = {
+    present: "Present",
+    late: "Late",
+    absent: "Absent",
+    working: "Working",
+    halfday: "Half Day",
+  };
+  return statusMap[status as keyof typeof statusMap] || status;
+};
 
   // Check if user has permission to access this component
   if (!isSuperAdmin() && !isAdmin()) {
@@ -778,24 +820,198 @@ const StaffManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value='attendance' className='space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='text-center py-8'>
-                <Clock className='w-12 h-12 mx-auto text-muted-foreground mb-4' />
-                <h3 className='text-lg font-semibold mb-2'>
-                  Attendance Tracking
-                </h3>
-                <p className='text-muted-foreground'>
-                  Attendance tracking features coming soon
+      <TabsContent value='attendance' className='space-y-6'>
+  {/* Admin View - All Users Attendance */}
+  {(isSuperAdmin() || isAdmin()) ? (
+    <>
+      {/* Stats Cards */}
+      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm text-muted-foreground'>Total Employees</p>
+                <p className='text-2xl font-bold'>{attendanceStats?.totalEmployees || 0}</p>
+              </div>
+              <Users className='h-8 w-8 text-primary' />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm text-muted-foreground'>Present</p>
+                <p className='text-2xl font-bold text-green-600'>{attendanceStats?.present || 0}</p>
+              </div>
+              <UserCheck className='h-8 w-8 text-green-600' />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm text-muted-foreground'>Late</p>
+                <p className='text-2xl font-bold text-yellow-600'>{attendanceStats?.late || 0}</p>
+              </div>
+              <Clock className='h-8 w-8 text-yellow-600' />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-sm text-muted-foreground'>Absent</p>
+                <p className='text-2xl font-bold text-red-600'>{attendanceStats?.absent || 0}</p>
+              </div>
+              <AlertTriangle className='h-8 w-8 text-red-600' />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Attendance Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Today's Attendance - {format(new Date(), 'MMMM d, yyyy')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recordsLoading ? (
+            <div className='flex justify-center py-8'>
+              <Loader2 className='h-8 w-8 animate-spin' />
+            </div>
+          ) : attendanceRecords && attendanceRecords.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Check In</TableHead>
+                  <TableHead>Check Out</TableHead>
+                  <TableHead>Hours</TableHead>
+                  <TableHead>Location</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attendanceRecords.map((record) => (
+                  <TableRow key={record.id}>
+                    <TableCell>
+                      <div className='flex items-center space-x-3'>
+                        <Avatar className='h-8 w-8'>
+                          <AvatarFallback>
+                            {record.user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className='font-medium'>{record.user?.name || 'Unknown'}</p>
+                          <p className='text-xs text-muted-foreground'>{record.user?.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant='outline'>
+                        {getDepartmentFromRole(record.user?.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(record.status)}>
+                        {formatStatus(record.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className='font-mono'>
+                      {record.check_in || '--:--'}
+                    </TableCell>
+                    <TableCell className='font-mono'>
+                      {record.check_out || '--:--'}
+                    </TableCell>
+                    <TableCell>
+                      {record.hours_worked ? `${record.hours_worked}h` : '--'}
+                    </TableCell>
+                    <TableCell>{record.location || 'N/A'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className='text-center py-8 text-muted-foreground'>
+              No attendance records for today
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  ) : (
+    /* Regular User View - Own Attendance */
+    <Card>
+      <CardHeader>
+        <CardTitle>My Attendance Today</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {myLoading ? (
+          <div className='flex justify-center py-8'>
+            <Loader2 className='h-8 w-8 animate-spin' />
+          </div>
+        ) : myAttendance ? (
+          <div className='space-y-4'>
+            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+              <div className='text-center p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Status</p>
+                <Badge className={getStatusColor(myAttendance.status)}>
+                  {formatStatus(myAttendance.status)}
+                </Badge>
+              </div>
+              <div className='text-center p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Check In</p>
+                <p className='text-lg font-bold font-mono'>
+                  {myAttendance.check_in || '--:--'}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <div className='text-center p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Check Out</p>
+                <p className='text-lg font-bold font-mono'>
+                  {myAttendance.check_out || '--:--'}
+                </p>
+              </div>
+              <div className='text-center p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Hours Worked</p>
+                <p className='text-lg font-bold'>
+                  {myAttendance.hours_worked ? `${myAttendance.hours_worked}h` : '0h'}
+                </p>
+              </div>
+            </div>
+            
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+              <div className='p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Location</p>
+                <p className='font-medium'>{myAttendance.location || 'Not specified'}</p>
+              </div>
+              <div className='p-4 border rounded-lg'>
+                <p className='text-sm text-muted-foreground mb-1'>Notes</p>
+                <p className='font-medium'>{myAttendance.notes || 'No notes'}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className='text-center py-8'>
+            <Clock className='w-12 h-12 mx-auto text-muted-foreground mb-4' />
+            <h3 className='text-lg font-semibold mb-2'>
+              No Attendance Submitted
+            </h3>
+            <p className='text-muted-foreground mb-4'>
+              You haven't submitted your attendance for today yet
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )}
+</TabsContent>
       </Tabs>
 
       {/* Edit Staff Member Dialog */}
