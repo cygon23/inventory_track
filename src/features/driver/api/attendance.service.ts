@@ -85,6 +85,41 @@ export async function fetchAttendanceByDate(
     return records;
 }
 
+export async function fetchMyAttendance(userId: string, date: string) {
+  const { data, error } = await supabase
+    .from('attendance')
+    .select(`
+      *,
+      user:users!attendance_user_id_fkey(
+        name,
+        email,
+        role
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data as AttendanceRecord | null;
+}
+
+export async function fetchEmployeeMonthlyAttendance(userId: string, year: number, month: number) {
+  const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+  const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return data as AttendanceRecord[];
+}
+
 // Fetch attendance stats for a date
 export async function fetchAttendanceStats(
     date: string,
@@ -203,6 +238,40 @@ export async function markAbsent(userId: string, date: string, notes?: string) {
         hours_worked: 0,
         overtime: 0,
     });
+}
+
+// Submit full attendance details
+export async function submitAttendanceDetails(data: {
+  user_id: string;
+  date: string;
+  check_in: string;
+  check_out?: string;
+  status: 'present' | 'late' | 'absent' | 'working' | 'halfday';
+  location: string;
+  notes?: string;
+}) {
+  // Calculate hours if both check_in and check_out exist
+  let hours_worked = 0;
+  let overtime = 0;
+
+  if (data.check_out && data.check_in) {
+    const checkInTime = new Date(`${data.date}T${data.check_in}`);
+    const checkOutTime = new Date(`${data.date}T${data.check_out}`);
+    hours_worked = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+    overtime = Math.max(0, hours_worked - 8);
+  }
+
+  return upsertAttendance({
+    user_id: data.user_id,
+    date: data.date,
+    check_in: data.check_in,
+    check_out: data.check_out || null,
+    status: data.status,
+    location: data.location,
+    notes: data.notes || null,
+    hours_worked: Number(hours_worked.toFixed(2)),
+    overtime: Number(overtime.toFixed(2))
+  });
 }
 
 // Delete attendance record

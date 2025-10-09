@@ -41,57 +41,147 @@ import {
   XCircle,
   AlertCircle,
   Users,
-  Calendar as CalendarClock,
-  TrendingUp,
   Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import AttendanceForm from "../AttendanceForm";
 import {
   useAttendanceByDate,
   useAttendanceStats,
+  useMyAttendance,
 } from "../../features/driver/hooks/useAttendance";
 import { getDepartmentFromRole } from "../../features/driver/api/attendance.service";
 
-interface AttendanceManagementProps {
-  currentUser: any;
-}
-
-const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
-  currentUser,
-}) => {
+const AttendanceManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  if (!currentUser) {
+    return (
+      <div className='flex items-center justify-center h-64'>
+        <Loader2 className='h-8 w-8 animate-spin text-primary' />
+      </div>
+    );
+  }
+
   const dateString = format(selectedDate, "yyyy-MM-dd");
+  const isAdmin =
+    currentUser?.role === "admin";
+  const today = format(new Date(), "yyyy-MM-dd");
+  const isToday = dateString === today;
 
   // Fetch real data
+  const { data: myAttendance, isLoading: myAttendanceLoading } =
+    useMyAttendance(currentUser.id, dateString);
   const {
     data: attendanceRecords,
     isLoading: recordsLoading,
     error: recordsError,
-  } = useAttendanceByDate(dateString, {
-    search: searchTerm || undefined,
-    department: departmentFilter !== "all" ? departmentFilter : undefined,
-    status: statusFilter !== "all" ? statusFilter : undefined,
-  });
-
+  } = useAttendanceByDate(
+    dateString,
+    isAdmin
+      ? {
+          search: searchTerm || undefined,
+          department: departmentFilter !== "all" ? departmentFilter : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+        }
+      : undefined
+  );
   const { data: stats, isLoading: statsLoading } =
     useAttendanceStats(dateString);
 
+  // Transform data
+  const attendanceData = isAdmin
+    ? attendanceRecords?.map((record) => ({
+        id: record.id,
+        name: record.user?.name || "Unknown",
+        role: record.user?.role || "N/A",
+        department: getDepartmentFromRole(record.user?.role),
+        checkIn: record.check_in,
+        checkOut: record.check_out,
+        status: record.status,
+        hoursWorked: record.hours_worked,
+        overtime: record.overtime,
+        location: record.location || "N/A",
+        notes: record.notes || "",
+      })) || []
+    : myAttendance
+    ? [
+        {
+          id: myAttendance.id,
+          name: currentUser?.name || "You",
+          role: currentUser?.role || "N/A",
+          department: getDepartmentFromRole(currentUser?.role),
+          checkIn: myAttendance.check_in,
+          checkOut: myAttendance.check_out,
+          status: myAttendance.status,
+          hoursWorked: myAttendance.hours_worked,
+          overtime: myAttendance.overtime,
+          location: myAttendance.location || "N/A",
+          notes: myAttendance.notes || "",
+        },
+      ]
+    : [];
+
+  const statsDisplay = [
+    {
+      title: isAdmin ? "Total Employees" : "Status",
+      value: isAdmin
+        ? stats?.totalEmployees.toString() || "0"
+        : myAttendance?.status
+        ? myAttendance.status.toUpperCase()
+        : "NOT SUBMITTED",
+      change: isAdmin ? "Active today" : "Today",
+      icon: Users,
+      color: "text-primary",
+    },
+    {
+      title: isAdmin ? "Present" : "Check In",
+      value: isAdmin
+        ? stats?.present.toString() || "0"
+        : myAttendance?.check_in || "--:--",
+      change: isAdmin ? `${stats?.attendanceRate || 0}% attendance` : "Time",
+      icon: CheckCircle,
+      color: "text-success",
+    },
+    {
+      title: isAdmin ? "Late Arrivals" : "Check Out",
+      value: isAdmin
+        ? stats?.late.toString() || "0"
+        : myAttendance?.check_out || "--:--",
+      change: isAdmin ? `${stats?.late || 0} employees` : "Time",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      title: isAdmin ? "Absent" : "Hours Worked",
+      value: isAdmin
+        ? stats?.absent.toString() || "0"
+        : myAttendance?.hours_worked?.toString() || "0",
+      change: isAdmin
+        ? `${100 - (stats?.attendanceRate || 0)}% absence`
+        : "Total",
+      icon: XCircle,
+      color: "text-destructive",
+    },
+  ];
+
   const getStatusColor = (status: string) => {
     const colors = {
-      present: "bg-green-100 text-green-800 border-green-200",
-      late: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      absent: "bg-red-100 text-red-800 border-red-200",
-      working: "bg-blue-100 text-blue-800 border-blue-200",
-      halfday: "bg-purple-100 text-purple-800 border-purple-200",
+      present: "bg-success/10 text-success border-success/20",
+      late: "bg-warning/10 text-warning border-warning/20",
+      absent: "bg-destructive/10 text-destructive border-destructive/20",
+      working: "bg-primary/10 text-primary border-primary/20",
+      halfday: "bg-secondary/10 text-secondary border-secondary/20",
     };
     return (
       colors[status as keyof typeof colors] ||
-      "bg-gray-100 text-gray-800 border-gray-200"
+      "bg-muted/10 text-muted-foreground border-muted/20"
     );
   };
 
@@ -131,56 +221,21 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     );
   };
 
-  // Transform data for display
-  const attendanceData =
-    attendanceRecords?.map((record) => ({
-      id: record.id,
-      userId: record.user_id,
-      name: record.user?.full_name || "Unknown",
-      role: record.user?.role || "N/A",
-      department: getDepartmentFromRole(record.user?.role),
-      checkIn: record.check_in,
-      checkOut: record.check_out,
-      status: record.status,
-      hoursWorked: record.hours_worked,
-      overtime: record.overtime,
-      location: record.location || "N/A",
-      notes: record.notes || "",
-    })) || [];
+  const filteredAttendance = attendanceData.filter((record) => {
+    const matchesSearch =
+      record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.role.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const statsDisplay = [
-    {
-      title: "Total Employees",
-      value: stats?.totalEmployees.toString() || "0",
-      change: "Active today",
-      icon: Users,
-      color: "text-blue-600",
-    },
-    {
-      title: "Present",
-      value: stats?.present.toString() || "0",
-      change: `${stats?.attendanceRate || 0}% attendance`,
-      icon: CheckCircle,
-      color: "text-green-600",
-    },
-    {
-      title: "Late Arrivals",
-      value: stats?.late.toString() || "0",
-      change: `${stats?.late || 0} employees`,
-      icon: Clock,
-      color: "text-yellow-600",
-    },
-    {
-      title: "Absent",
-      value: stats?.absent.toString() || "0",
-      change: `${100 - (stats?.attendanceRate || 0)}% absence`,
-      icon: XCircle,
-      color: "text-red-600",
-    },
-  ];
+    const matchesDepartment =
+      departmentFilter === "all" ||
+      record.department.toLowerCase() === departmentFilter.toLowerCase();
+    const matchesStatus =
+      statusFilter === "all" || record.status === statusFilter;
 
-  // Loading state
-  if (recordsLoading || statsLoading) {
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
+
+  if (recordsLoading || statsLoading || myAttendanceLoading) {
     return (
       <div className='flex items-center justify-center h-64'>
         <Loader2 className='h-8 w-8 animate-spin text-primary' />
@@ -188,7 +243,6 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     );
   }
 
-  // Error state
   if (recordsError) {
     return (
       <Alert variant='destructive'>
@@ -206,10 +260,12 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       <div className='flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0'>
         <div>
           <h1 className='text-2xl md:text-3xl font-bold text-foreground'>
-            Attendance Management
+            {isAdmin ? "Attendance Management" : "My Attendance"}
           </h1>
           <p className='text-muted-foreground'>
-            Track employee attendance and working hours
+            {isAdmin
+              ? "Track employee attendance and working hours"
+              : "Submit and view your attendance"}
           </p>
         </div>
         <div className='flex space-x-2'>
@@ -234,12 +290,23 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               />
             </PopoverContent>
           </Popover>
-          <Button>
-            <Download className='h-4 w-4 mr-2' />
-            Export
-          </Button>
+          {isAdmin && (
+            <Button>
+              <Download className='h-4 w-4 mr-2' />
+              Export
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Attendance Form - Only for non-admins on today's date */}
+      {!isAdmin && isToday && (
+        <AttendanceForm
+          userId={currentUser.id}
+          userName={currentUser.name}
+          userRole={currentUser.role}
+        />
+      )}
 
       {/* Stats */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6'>
@@ -268,62 +335,67 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         })}
       </div>
 
-      {/* Filters */}
-      <Card className='safari-card'>
-        <CardContent className='p-4 md:p-6'>
-          <div className='flex flex-col sm:flex-row gap-4'>
-            <div className='relative flex-1'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-              <Input
-                placeholder='Search employees by name, role, or email...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className='pl-10'
-              />
-            </div>
-            <div className='flex space-x-2'>
-              <Select
-                value={departmentFilter}
-                onValueChange={setDepartmentFilter}>
-                <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Department' />
-                </SelectTrigger>
-                <SelectContent className='bg-popover'>
-                  <SelectItem value='all'>All Departments</SelectItem>
-                  <SelectItem value='management'>Management</SelectItem>
-                  <SelectItem value='operations'>Operations</SelectItem>
-                  <SelectItem value='booking'>Booking</SelectItem>
-                  <SelectItem value='finance'>Finance</SelectItem>
-                  <SelectItem value='support'>Support</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Filters - Only for admins */}
+      {isAdmin && (
+        <Card className='safari-card'>
+          <CardContent className='p-4 md:p-6'>
+            <div className='flex flex-col sm:flex-row gap-4'>
+              <div className='relative flex-1'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                <Input
+                  placeholder='Search employees by name, role, or ID...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className='pl-10'
+                />
+              </div>
+              <div className='flex space-x-2'>
+                <Select
+                  value={departmentFilter}
+                  onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className='w-40'>
+                    <SelectValue placeholder='Department' />
+                  </SelectTrigger>
+                  <SelectContent className='bg-popover'>
+                    <SelectItem value='all'>All Departments</SelectItem>
+                    <SelectItem value='management'>Management</SelectItem>
+                    <SelectItem value='operations'>Operations</SelectItem>
+                    <SelectItem value='booking'>Booking</SelectItem>
+                    <SelectItem value='finance'>Finance</SelectItem>
+                    <SelectItem value='support'>Support</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className='w-32'>
-                  <SelectValue placeholder='Status' />
-                </SelectTrigger>
-                <SelectContent className='bg-popover'>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value='present'>Present</SelectItem>
-                  <SelectItem value='late'>Late</SelectItem>
-                  <SelectItem value='absent'>Absent</SelectItem>
-                  <SelectItem value='working'>Working</SelectItem>
-                  <SelectItem value='halfday'>Half Day</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className='w-32'>
+                    <SelectValue placeholder='Status' />
+                  </SelectTrigger>
+                  <SelectContent className='bg-popover'>
+                    <SelectItem value='all'>All Status</SelectItem>
+                    <SelectItem value='present'>Present</SelectItem>
+                    <SelectItem value='late'>Late</SelectItem>
+                    <SelectItem value='absent'>Absent</SelectItem>
+                    <SelectItem value='working'>Working</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Attendance Table */}
       <Card className='safari-card'>
         <CardHeader>
           <CardTitle>
-            Daily Attendance - {format(selectedDate, "MMMM d, yyyy")}
+            {isAdmin
+              ? `Daily Attendance - ${format(selectedDate, "MMMM d, yyyy")}`
+              : "My Attendance Record"}
           </CardTitle>
           <CardDescription>
-            Real-time attendance tracking and employee status
+            {isAdmin
+              ? "Real-time attendance tracking and employee status"
+              : "Your attendance details"}
           </CardDescription>
         </CardHeader>
         <CardContent className='p-0'>
@@ -332,9 +404,11 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  <TableHead className='hidden md:table-cell'>
-                    Department
-                  </TableHead>
+                  {isAdmin && (
+                    <TableHead className='hidden md:table-cell'>
+                      Department
+                    </TableHead>
+                  )}
                   <TableHead>Status</TableHead>
                   <TableHead className='hidden sm:table-cell'>
                     Check In
@@ -352,8 +426,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attendanceData.length > 0 ? (
-                  attendanceData.map((record) => (
+                {filteredAttendance.length > 0 ? (
+                  filteredAttendance.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell>
                         <div className='flex items-center space-x-3'>
@@ -370,9 +444,11 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className='hidden md:table-cell'>
-                        <Badge variant='outline'>{record.department}</Badge>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className='hidden md:table-cell'>
+                          <Badge variant='outline'>{record.department}</Badge>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge className={getStatusColor(record.status)}>
                           <div className='flex items-center space-x-1'>
@@ -405,7 +481,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                         <div className='text-sm'>
                           <p className='font-medium'>{record.hoursWorked}h</p>
                           {record.overtime > 0 && (
-                            <p className='text-xs text-yellow-600'>
+                            <p className='text-xs text-warning'>
                               +{record.overtime}h OT
                             </p>
                           )}
@@ -426,7 +502,9 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                     <TableCell
                       colSpan={8}
                       className='text-center text-muted-foreground py-8'>
-                      No attendance records found for this date
+                      {!isAdmin && !myAttendance
+                        ? "No attendance submitted for this date. Please submit your attendance using the form above."
+                        : "No attendance records found for this date"}
                     </TableCell>
                   </TableRow>
                 )}
@@ -435,60 +513,6 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           </div>
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <Card className='safari-card'>
-          <CardHeader>
-            <CardTitle className='text-lg flex items-center'>
-              <CalendarClock className='h-5 w-5 mr-2 text-primary' />
-              Schedule Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className='text-sm text-muted-foreground mb-4'>
-              Manage employee schedules and shifts
-            </p>
-            <Button variant='outline' size='sm' className='w-full'>
-              View Schedules
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className='safari-card'>
-          <CardHeader>
-            <CardTitle className='text-lg flex items-center'>
-              <TrendingUp className='h-5 w-5 mr-2 text-success' />
-              Reports
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className='text-sm text-muted-foreground mb-4'>
-              Generate attendance and productivity reports
-            </p>
-            <Button variant='outline' size='sm' className='w-full'>
-              Generate Report
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className='safari-card'>
-          <CardHeader>
-            <CardTitle className='text-lg flex items-center'>
-              <AlertCircle className='h-5 w-5 mr-2 text-warning' />
-              Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className='text-sm text-muted-foreground mb-4'>
-              Configure attendance alerts and notifications
-            </p>
-            <Button variant='outline' size='sm' className='w-full'>
-              Manage Alerts
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };
