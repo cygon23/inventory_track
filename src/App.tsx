@@ -34,9 +34,9 @@ import UserManagement from "./components/admin/UserManagement";
 import ForensicMonitoring from "./components/admin/ForensicMonitoring";
 import AttendanceManagement from "./components/staff/AttendanceManagement";
 import { Loader2 } from "lucide-react";
+import AllBookings from "./pages/AllBookings";
 
 const queryClient = new QueryClient();
-
 
 function getRolePrefix(role: string): string {
   const prefixMap: { [key: string]: string } = {
@@ -177,6 +177,7 @@ const AppRoutes: React.FC = () => {
         <Route path='reports' element={<FinancialReports />} />
         <Route path='messages' element={<CentralizedMessages />} />
         <Route path='attendance' element={<AttendanceManagement />} />
+        <Route path='bookings' element={<AllBookings />} />
       </Route>
 
       {/* Customer Service Routes */}

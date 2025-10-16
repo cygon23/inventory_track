@@ -1,87 +1,138 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  Users, 
-  Calendar, 
-  DollarSign, 
-  MessageSquare, 
-  TrendingUp, 
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Users,
+  Calendar,
+  DollarSign,
+  MessageSquare,
+  TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Clock
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+  Clock,
+  Loader2,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const stats = [
-    {
-      title: 'Total Bookings',
-      value: '156',
-      change: '+12%',
-      icon: Calendar,
-      color: 'text-blue-600'
-    },
-    {
-      title: 'Active Customers',
-      value: '89',
-      change: '+5%',
-      icon: Users,
-      color: 'text-green-600'
-    },
-    {
-      title: 'Revenue (This Month)',
-      value: '$145,750',
-      change: '+18%',
-      icon: DollarSign,
-      color: 'text-yellow-600'
-    },
-    {
-      title: 'Unread Messages',
-      value: '23',
-      change: '+3',
-      icon: MessageSquare,
-      color: 'text-red-600'
-    }
-  ];
-
-  const recentBookings = [
-    { id: 'SF001', customer: 'John Smith', package: '3-Day Serengeti', status: 'confirmed', amount: '$4,800' },
-    { id: 'SF002', customer: 'Emma Thompson', package: '5-Day Northern Circuit', status: 'paid', amount: '$6,250' },
-    { id: 'SF003', customer: 'Carlos Rodriguez', package: 'Ngorongoro Day Trip', status: 'in_progress', amount: '$700' }
-  ];
+  const { loading, stats, recentBookings } = useDashboardData();
 
   const urgentMessages = [
-    { id: 1, customer: 'Anna Johansson', type: 'complaint', priority: 'urgent', time: '2h ago' },
-    { id: 2, customer: 'Emma Thompson', type: 'payment_issue', priority: 'high', time: '4h ago' },
-    { id: 3, customer: 'John Smith', type: 'booking_inquiry', priority: 'medium', time: '6h ago' }
+    {
+      id: 1,
+      customer: "Anna Johansson",
+      type: "complaint",
+      priority: "urgent",
+      time: "2h ago",
+    },
+    {
+      id: 2,
+      customer: "Emma Thompson",
+      type: "payment_issue",
+      priority: "high",
+      time: "4h ago",
+    },
+    {
+      id: 3,
+      customer: "John Smith",
+      type: "booking_inquiry",
+      priority: "medium",
+      time: "6h ago",
+    },
+  ];
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const statsData = [
+    {
+      title: "Total Bookings",
+      value: stats.totalBookings.toString(),
+      change: `${stats.totalBookingsChange >= 0 ? "+" : ""}${
+        stats.totalBookingsChange
+      }%`,
+      icon: Calendar,
+      color: "text-blue-600",
+    },
+    {
+      title: "Active Customers",
+      value: stats.activeCustomers.toString(),
+      change: `${stats.activeCustomersChange >= 0 ? "+" : ""}${
+        stats.activeCustomersChange
+      }%`,
+      icon: Users,
+      color: "text-green-600",
+    },
+    {
+      title: "Revenue (This Month)",
+      value: formatCurrency(stats.monthlyRevenue),
+      change: `${stats.monthlyRevenueChange >= 0 ? "+" : ""}${
+        stats.monthlyRevenueChange
+      }%`,
+      icon: DollarSign,
+      color: "text-yellow-600",
+    },
+    {
+      title: "Unread Messages",
+      value: "23",
+      change: "+3",
+      icon: MessageSquare,
+      color: "text-red-600",
+    },
   ];
 
   const getStatusColor = (status: string) => {
     const colors = {
-      confirmed: 'bg-yellow-100 text-yellow-800',
-      paid: 'bg-green-100 text-green-800',
-      in_progress: 'bg-blue-100 text-blue-800',
-      completed: 'bg-primary text-primary-foreground'
+      inquiry: "bg-gray-100 text-gray-800",
+      quoted: "bg-purple-100 text-purple-800",
+      confirmed: "bg-yellow-100 text-yellow-800",
+      paid: "bg-green-100 text-green-800",
+      in_progress: "bg-blue-100 text-blue-800",
+      completed: "bg-primary text-primary-foreground",
+      cancelled: "bg-red-100 text-red-800",
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   const getPriorityColor = (priority: string) => {
     const colors = {
-      urgent: 'bg-red-100 text-red-800',
-      high: 'bg-orange-100 text-orange-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      low: 'bg-green-100 text-green-800'
+      urgent: "bg-red-100 text-red-800",
+      high: "bg-orange-100 text-orange-800",
+      medium: "bg-yellow-100 text-yellow-800",
+      low: "bg-green-100 text-green-800",
     };
-    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return (
+      colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    );
   };
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-96'>
+        <Loader2 className='h-8 w-8 animate-spin text-primary' />
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>
-      {/* Welcome Header */}
       <div>
         <h1 className='text-3xl font-bold text-foreground'>
           Welcome back, {currentUser.name}
@@ -91,9 +142,8 @@ const AdminDashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-        {stats.map((stat, index) => {
+        {statsData.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Card key={index} className='safari-card'>
@@ -118,12 +168,14 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        {/* Recent Bookings */}
         <Card className='safari-card'>
           <CardHeader>
             <CardTitle className='flex items-center justify-between'>
               Recent Bookings
-              <Button variant='outline' size='sm'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => navigate("/finance/bookings")}>
                 View All
               </Button>
             </CardTitle>
@@ -131,34 +183,41 @@ const AdminDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className='space-y-4'>
-              {recentBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className='flex items-center justify-between p-3 border border-border rounded-lg'>
-                  <div className='flex items-center space-x-3'>
-                    <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
-                      <Calendar className='h-5 w-5 text-primary' />
+              {recentBookings.length === 0 ? (
+                <p className='text-center text-muted-foreground py-4'>
+                  No bookings yet
+                </p>
+              ) : (
+                recentBookings.slice(0, 5).map((booking) => (
+                  <div
+                    key={booking.id}
+                    className='flex items-center justify-between p-3 border border-border rounded-lg'>
+                    <div className='flex items-center space-x-3'>
+                      <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
+                        <Calendar className='h-5 w-5 text-primary' />
+                      </div>
+                      <div>
+                        <p className='font-medium'>{booking.customer_name}</p>
+                        <p className='text-sm text-muted-foreground'>
+                          {booking.safari_package}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className='font-medium'>{booking.customer}</p>
-                      <p className='text-sm text-muted-foreground'>
-                        {booking.package}
+                    <div className='text-right'>
+                      <Badge className={getStatusColor(booking.status)}>
+                        {booking.status}
+                      </Badge>
+                      <p className='text-sm font-medium mt-1'>
+                        {formatCurrency(Number(booking.total_amount))}
                       </p>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <Badge className={getStatusColor(booking.status)}>
-                      {booking.status}
-                    </Badge>
-                    <p className='text-sm font-medium mt-1'>{booking.amount}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Urgent Messages */}
         <Card className='safari-card'>
           <CardHeader>
             <CardTitle className='flex items-center justify-between'>
@@ -206,7 +265,6 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Performance Overview */}
       <Card className='safari-card'>
         <CardHeader>
           <CardTitle>Performance Overview</CardTitle>

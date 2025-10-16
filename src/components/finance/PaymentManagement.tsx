@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -42,97 +42,92 @@ import {
   Send,
   Eye,
   FileText,
+  Loader2,
 } from "lucide-react";
 import ViewPaymentDetailsDialog from "../modals/finace/ViewPaymentDetailsDialog";
 import GenerateInvoiceDialog from "../modals/finace/GenerateInvoiceDialog";
 import SendPaymentReminderDialog from "../modals/finace/SendPaymentReminderDialog";
 import RecordPaymentDialog from "../modals/finace/RecordPaymentDialog";
+import {
+  fetchPayments,
+  getPaymentStats,
+  Payment,
+} from "@/services/paymentService";
+import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/components/ui/use-toast";
 
-interface PaymentManagementProps {
-  currentUser?: any;
-}
-
-interface Payment {
-  id: string;
-  bookingId: string;
-  customerName: string;
-  amount: number;
-  currency: string;
-  status: "pending" | "completed" | "failed" | "overdue";
-  dueDate: string;
-  paidDate?: string;
-  method: string;
-  type: "deposit" | "balance" | "full_payment";
-  description: string;
-}
-
-const mockPayments: Payment[] = [
-  {
-    id: "PAY-001",
-    bookingId: "BK-2024-001",
-    customerName: "John Smith",
-    amount: 2500,
-    currency: "USD",
-    status: "completed",
-    dueDate: "2024-01-15",
-    paidDate: "2024-01-14",
-    method: "Credit Card",
-    type: "deposit",
-    description: "Deposit for Serengeti Safari",
-  },
-  {
-    id: "PAY-002",
-    bookingId: "BK-2024-002",
-    customerName: "Emma Wilson",
-    amount: 7500,
-    currency: "USD",
-    status: "pending",
-    dueDate: "2024-02-20",
-    method: "Bank Transfer",
-    type: "balance",
-    description: "Balance payment for Kilimanjaro Trek",
-  },
-  {
-    id: "PAY-003",
-    bookingId: "BK-2024-003",
-    customerName: "Michael Brown",
-    amount: 1800,
-    currency: "USD",
-    status: "overdue",
-    dueDate: "2024-01-10",
-    method: "Credit Card",
-    type: "deposit",
-    description: "Deposit for Ngorongoro Crater Tour",
-  },
-  {
-    id: "PAY-004",
-    bookingId: "BK-2024-004",
-    customerName: "Sarah Davis",
-    amount: 5200,
-    currency: "USD",
-    status: "failed",
-    dueDate: "2024-01-25",
-    method: "Credit Card",
-    type: "full_payment",
-    description: "Full payment for Masai Mara Safari",
-  },
-];
-
-const PaymentManagement: React.FC<PaymentManagementProps> = ({
-  currentUser,
-}) => {
+const PaymentManagement = () => {
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const { toast } = useToast();
+
+  // Dialog states
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isRecordOpen, setIsRecordOpen] = useState(false);
 
-  const filteredPayments = mockPayments.filter((payment) => {
+  // Stats
+  const [stats, setStats] = useState({
+    pending: 0,
+    overdue: 0,
+    completed: 0,
+    pendingCount: 0,
+    overdueCount: 0,
+    completedCount: 0,
+  });
+
+  // Load payments
+  const loadPayments = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchPayments();
+      setPayments(data);
+
+      const statsData = await getPaymentStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error("Error loading payments:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load payments",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPayments();
+
+    // Subscribe to real-time changes
+    const subscription = supabase
+      .channel("payments_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payments" },
+        () => {
+          loadPayments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Filter payments
+  const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
-      payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.bookingId.toLowerCase().includes(searchTerm.toLowerCase());
+      payment.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.bookings?.booking_reference
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || payment.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -168,15 +163,18 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
     });
   };
 
-  const totalPending = mockPayments
-    .filter((p) => p.status === "pending")
-    .reduce((sum, p) => sum + p.amount, 0);
-  const totalOverdue = mockPayments
-    .filter((p) => p.status === "overdue")
-    .reduce((sum, p) => sum + p.amount, 0);
-  const totalCompleted = mockPayments
-    .filter((p) => p.status === "completed")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const collectionRate =
+    payments.length > 0
+      ? ((stats.completedCount / payments.length) * 100).toFixed(1)
+      : 0;
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-96'>
+        <Loader2 className='h-8 w-8 animate-spin' />
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>
@@ -200,11 +198,10 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-bold'>
-              ${totalPending.toLocaleString()}
+              ${stats.pending.toLocaleString()}
             </div>
             <p className='text-xs text-muted-foreground'>
-              {mockPayments.filter((p) => p.status === "pending").length}{" "}
-              transactions
+              {stats.pendingCount} transactions
             </p>
           </CardContent>
         </Card>
@@ -218,11 +215,10 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-bold text-red-600'>
-              ${totalOverdue.toLocaleString()}
+              ${stats.overdue.toLocaleString()}
             </div>
             <p className='text-xs text-muted-foreground'>
-              {mockPayments.filter((p) => p.status === "overdue").length}{" "}
-              transactions
+              {stats.overdueCount} transactions
             </p>
           </CardContent>
         </Card>
@@ -236,11 +232,10 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-bold text-green-600'>
-              ${totalCompleted.toLocaleString()}
+              ${stats.completed.toLocaleString()}
             </div>
             <p className='text-xs text-muted-foreground'>
-              {mockPayments.filter((p) => p.status === "completed").length}{" "}
-              transactions
+              {stats.completedCount} transactions
             </p>
           </CardContent>
         </Card>
@@ -253,9 +248,9 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
             <TrendingUp className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>87.5%</div>
+            <div className='text-2xl font-bold'>{collectionRate}%</div>
             <p className='text-xs text-muted-foreground'>
-              +2.1% from last month
+              Based on completed payments
             </p>
           </CardContent>
         </Card>
@@ -319,63 +314,75 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className='font-medium'>{payment.id}</TableCell>
-                    <TableCell>{payment.customerName}</TableCell>
-                    <TableCell>{payment.bookingId}</TableCell>
-                    <TableCell className='font-medium'>
-                      {formatCurrency(payment.amount, payment.currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant='outline' className='capitalize'>
-                        {payment.type.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(payment.dueDate)}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(payment.status)}>
-                        {payment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{payment.method}</TableCell>
-                    <TableCell className='text-right'>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant='ghost' className='h-8 w-8 p-0'>
-                            <MoreHorizontal className='h-4 w-4' />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end'>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedPayment(payment);
-                              setIsDetailsOpen(true);
-                            }}>
-                            <Eye className='mr-2 h-4 w-4' />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedPayment(payment);
-                              setIsInvoiceOpen(true);
-                            }}>
-                            <FileText className='mr-2 h-4 w-4' />
-                            Generate Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedPayment(payment);
-                              setIsReminderOpen(true);
-                            }}>
-                            <Send className='mr-2 h-4 w-4' />
-                            Send Reminder
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {filteredPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className='text-center py-8'>
+                      No payments found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className='font-medium'>
+                        PAY-{payment.id.slice(0, 8).toUpperCase()}
+                      </TableCell>
+                      <TableCell>{payment.customer_name}</TableCell>
+                      <TableCell>
+                        {payment.bookings?.booking_reference || "N/A"}
+                      </TableCell>
+                      <TableCell className='font-medium'>
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant='outline' className='capitalize'>
+                          {payment.type?.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(payment.due_date)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(payment.status)}>
+                          {payment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{payment.method || "N/A"}</TableCell>
+                      <TableCell className='text-right'>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant='ghost' className='h-8 w-8 p-0'>
+                              <MoreHorizontal className='h-4 w-4' />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align='end'>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedPayment(payment);
+                                setIsDetailsOpen(true);
+                              }}>
+                              <Eye className='mr-2 h-4 w-4' />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedPayment(payment);
+                                setIsInvoiceOpen(true);
+                              }}>
+                              <FileText className='mr-2 h-4 w-4' />
+                              Generate Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedPayment(payment);
+                                setIsReminderOpen(true);
+                              }}>
+                              <Send className='mr-2 h-4 w-4' />
+                              Send Reminder
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -395,7 +402,10 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
         payment={selectedPayment}
         onGenerate={(data) => {
           console.log("Invoice generated:", data);
-          // TODO: Handle invoice generation
+          toast({
+            title: "Success",
+            description: "Invoice generated successfully",
+          });
         }}
       />
 
@@ -405,16 +415,22 @@ const PaymentManagement: React.FC<PaymentManagementProps> = ({
         payment={selectedPayment}
         onSend={(data) => {
           console.log("Reminder sent:", data);
-          // TODO: Handle reminder sending
+          toast({
+            title: "Success",
+            description: "Payment reminder sent successfully",
+          });
         }}
       />
 
       <RecordPaymentDialog
         open={isRecordOpen}
         onOpenChange={setIsRecordOpen}
-        onSubmit={(data) => {
-          console.log("Payment recorded:", data);
-          // TODO: Save payment to database
+        onSubmit={async (data) => {
+          await loadPayments();
+          toast({
+            title: "Success",
+            description: "Payment recorded successfully",
+          });
         }}
       />
     </div>

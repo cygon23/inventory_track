@@ -19,16 +19,21 @@ import {
 
 interface Payment {
   id: string;
-  bookingId: string;
-  customerName: string;
+  booking_id: string;
+  customer_name: string;
   amount: number;
   currency: string;
   status: "pending" | "completed" | "failed" | "overdue";
-  dueDate: string;
-  paidDate?: string;
+  due_date: string;
+  paid_date?: string;
   method: string;
   type: "deposit" | "balance" | "full_payment";
   description: string;
+  bookings?: {
+    booking_reference: string;
+    customer_email: string;
+    customer_phone: string;
+  };
 }
 
 interface ViewPaymentDetailsDialogProps {
@@ -112,12 +117,30 @@ const ViewPaymentDetailsDialog: React.FC<ViewPaymentDetailsDialogProps> = ({
             <div className='grid grid-cols-2 gap-4 p-4 border border-border rounded-lg'>
               <div>
                 <p className='text-sm text-muted-foreground'>Customer Name</p>
-                <p className='font-medium'>{payment.customerName}</p>
+                <p className='font-medium'>{payment.customer_name}</p>
               </div>
               <div>
                 <p className='text-sm text-muted-foreground'>Booking ID</p>
-                <p className='font-medium'>{payment.bookingId}</p>
+                <p className='font-medium'>
+                  {payment.bookings?.booking_reference || "N/A"}
+                </p>
               </div>
+              {payment.bookings?.customer_email && (
+                <div>
+                  <p className='text-sm text-muted-foreground'>Email</p>
+                  <p className='font-medium'>
+                    {payment.bookings.customer_email}
+                  </p>
+                </div>
+              )}
+              {payment.bookings?.customer_phone && (
+                <div>
+                  <p className='text-sm text-muted-foreground'>Phone</p>
+                  <p className='font-medium'>
+                    {payment.bookings.customer_phone}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -132,19 +155,21 @@ const ViewPaymentDetailsDialog: React.FC<ViewPaymentDetailsDialogProps> = ({
             <div className='grid grid-cols-2 gap-4 p-4 border border-border rounded-lg'>
               <div>
                 <p className='text-sm text-muted-foreground'>Payment ID</p>
-                <p className='font-medium'>{payment.id}</p>
+                <p className='font-medium'>
+                  PAY-{payment.id.slice(0, 8).toUpperCase()}
+                </p>
               </div>
               <div>
                 <p className='text-sm text-muted-foreground'>Payment Type</p>
                 <Badge variant='outline' className='capitalize'>
-                  {payment.type.replace("_", " ")}
+                  {payment.type?.replace("_", " ")}
                 </Badge>
               </div>
               <div>
                 <p className='text-sm text-muted-foreground'>Payment Method</p>
                 <p className='font-medium flex items-center'>
                   <CreditCard className='h-3 w-3 mr-1' />
-                  {payment.method}
+                  {payment.method || "N/A"}
                 </p>
               </div>
               <div>
@@ -165,14 +190,14 @@ const ViewPaymentDetailsDialog: React.FC<ViewPaymentDetailsDialogProps> = ({
             <div className='grid grid-cols-2 gap-4 p-4 border border-border rounded-lg'>
               <div>
                 <p className='text-sm text-muted-foreground'>Due Date</p>
-                <p className='font-medium'>{formatDate(payment.dueDate)}</p>
+                <p className='font-medium'>{formatDate(payment.due_date)}</p>
               </div>
-              {payment.paidDate && (
+              {payment.paid_date && (
                 <div>
                   <p className='text-sm text-muted-foreground'>Paid Date</p>
                   <p className='font-medium flex items-center text-success'>
                     <CheckCircle className='h-3 w-3 mr-1' />
-                    {formatDate(payment.paidDate)}
+                    {formatDate(payment.paid_date)}
                   </p>
                 </div>
               )}
@@ -188,7 +213,9 @@ const ViewPaymentDetailsDialog: React.FC<ViewPaymentDetailsDialogProps> = ({
               Description
             </h3>
             <div className='p-4 border border-border rounded-lg bg-muted/50'>
-              <p className='text-sm'>{payment.description}</p>
+              <p className='text-sm'>
+                {payment.description || "No description provided"}
+              </p>
             </div>
           </div>
 
@@ -202,16 +229,16 @@ const ViewPaymentDetailsDialog: React.FC<ViewPaymentDetailsDialogProps> = ({
                   <div className='flex-1'>
                     <p className='font-medium text-sm'>Payment Completed</p>
                     <p className='text-xs text-muted-foreground'>
-                      {payment.paidDate && formatDate(payment.paidDate)}
+                      {payment.paid_date && formatDate(payment.paid_date)}
                     </p>
                   </div>
                 </div>
                 <div className='flex items-start space-x-3 p-3 border border-border rounded-lg'>
                   <div className='w-2 h-2 rounded-full bg-primary mt-2' />
                   <div className='flex-1'>
-                    <p className='font-medium text-sm'>Payment Initiated</p>
+                    <p className='font-medium text-sm'>Payment Created</p>
                     <p className='text-xs text-muted-foreground'>
-                      Payment request sent to customer
+                      Payment request created in system
                     </p>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +25,26 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, DollarSign } from "lucide-react";
+import { Calendar as CalendarIcon, DollarSign, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  fetchBookingsForPayment,
+  createPayment,
+} from "@/services/paymentService";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Booking {
+  id: string;
+  booking_reference: string;
+  customer_name: string;
+  total_amount: number;
+  paid_amount: number;
+}
 
 interface RecordPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (paymentData: any) => void;
+  onSubmit?: () => void;
 }
 
 const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
@@ -39,49 +52,120 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
   onOpenChange,
   onSubmit,
 }) => {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const [bookingId, setBookingId] = useState("");
-  const [customerName, setCustomerName] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [paymentType, setPaymentType] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [status, setStatus] = useState("completed");
   const [dueDate, setDueDate] = useState<Date>();
-  const [paidDate, setPaidDate] = useState<Date>();
+  const [paidDate, setPaidDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (open) {
+      loadBookings();
+    }
+  }, [open]);
+
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchBookingsForPayment();
+      setBookings(data);
+    } catch (error) {
+      console.error("Error loading bookings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load bookings",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookingSelect = (value: string) => {
+    setBookingId(value);
+    const booking = bookings.find((b) => b.id === value);
+    setSelectedBooking(booking || null);
+
+    if (booking) {
+      const remainingAmount = booking.total_amount - (booking.paid_amount || 0);
+      setAmount(remainingAmount.toString());
+      setDescription(`Payment for ${booking.booking_reference}`);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const paymentData = {
-      id: `PAY-${Date.now()}`,
-      bookingId,
-      customerName,
-      amount: parseFloat(amount),
-      currency,
-      type: paymentType,
-      method: paymentMethod,
-      status,
-      dueDate: dueDate?.toISOString(),
-      paidDate: paidDate?.toISOString(),
-      description,
-    };
-
-    if (onSubmit) {
-      onSubmit(paymentData);
+    if (!bookingId || !amount || !paymentType || !paymentMethod || !dueDate) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // Reset form
+    try {
+      setSubmitting(true);
+
+      const paymentData = {
+        booking_id: bookingId,
+        customer_name: selectedBooking?.customer_name || "",
+        amount: parseFloat(amount),
+        currency,
+        type: paymentType,
+        method: paymentMethod,
+        status,
+        due_date: format(dueDate, "yyyy-MM-dd"),
+        paid_date:
+          status === "completed" && paidDate
+            ? format(paidDate, "yyyy-MM-dd")
+            : undefined,
+        description,
+      };
+
+      await createPayment(paymentData);
+
+      toast({
+        title: "Success",
+        description: "Payment recorded successfully",
+      });
+
+      // Reset form
+      resetForm();
+      onOpenChange(false);
+      if (onSubmit) onSubmit();
+    } catch (error) {
+      console.error("Error recording payment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
     setBookingId("");
-    setCustomerName("");
+    setSelectedBooking(null);
     setAmount("");
     setPaymentType("");
     setPaymentMethod("");
     setDueDate(undefined);
-    setPaidDate(undefined);
+    setPaidDate(new Date());
     setDescription("");
-
-    onOpenChange(false);
   };
 
   return (
@@ -98,33 +182,71 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-6'>
-          {/* Customer Information */}
+          {/* Booking Selection */}
           <div className='space-y-4'>
-            <h3 className='font-semibold'>Customer Information</h3>
+            <h3 className='font-semibold'>Booking Information</h3>
 
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='bookingId'>Booking ID *</Label>
-                <Input
-                  id='bookingId'
-                  value={bookingId}
-                  onChange={(e) => setBookingId(e.target.value)}
-                  placeholder='BK-2024-001'
-                  required
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='customerName'>Customer Name *</Label>
-                <Input
-                  id='customerName'
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder='John Smith'
-                  required
-                />
-              </div>
+            <div className='space-y-2'>
+              <Label htmlFor='booking'>Select Booking *</Label>
+              {loading ? (
+                <div className='flex items-center justify-center p-4'>
+                  <Loader2 className='h-6 w-6 animate-spin' />
+                </div>
+              ) : (
+                <Select value={bookingId} onValueChange={handleBookingSelect}>
+                  <SelectTrigger id='booking'>
+                    <SelectValue placeholder='Select a booking' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bookings.map((booking) => (
+                      <SelectItem key={booking.id} value={booking.id}>
+                        {booking.booking_reference} - {booking.customer_name}
+                        (Remaining: $
+                        {(
+                          booking.total_amount - (booking.paid_amount || 0)
+                        ).toFixed(2)}
+                        )
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
+
+            {selectedBooking && (
+              <div className='p-4 border rounded-lg bg-muted/50'>
+                <div className='grid grid-cols-2 gap-4 text-sm'>
+                  <div>
+                    <p className='text-muted-foreground'>Customer</p>
+                    <p className='font-medium'>
+                      {selectedBooking.customer_name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className='text-muted-foreground'>Total Amount</p>
+                    <p className='font-medium'>
+                      ${selectedBooking.total_amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className='text-muted-foreground'>Paid Amount</p>
+                    <p className='font-medium'>
+                      ${(selectedBooking.paid_amount || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className='text-muted-foreground'>Remaining</p>
+                    <p className='font-medium text-orange-600'>
+                      $
+                      {(
+                        selectedBooking.total_amount -
+                        (selectedBooking.paid_amount || 0)
+                      ).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Payment Details */}
@@ -190,6 +312,7 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
                     <SelectItem value='Cash'>Cash</SelectItem>
                     <SelectItem value='PayPal'>PayPal</SelectItem>
                     <SelectItem value='Wire Transfer'>Wire Transfer</SelectItem>
+                    <SelectItem value='Mobile Money'>Mobile Money</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -259,7 +382,7 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
                       <Calendar
                         mode='single'
                         selected={paidDate}
-                        onSelect={setPaidDate}
+                        onSelect={(date) => setPaidDate(date || new Date())}
                         initialFocus
                       />
                     </PopoverContent>
@@ -276,7 +399,7 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
               id='description'
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder='Deposit for Serengeti Safari...'
+              placeholder='Payment description...'
               rows={3}
             />
           </div>
@@ -285,10 +408,20 @@ const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
             <Button
               type='button'
               variant='outline'
-              onClick={() => onOpenChange(false)}>
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}>
               Cancel
             </Button>
-            <Button type='submit'>Record Payment</Button>
+            <Button type='submit' disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Recording...
+                </>
+              ) : (
+                "Record Payment"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
