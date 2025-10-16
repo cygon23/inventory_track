@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 interface PaymentData {
     bookingId: string;
     customerName: string;
@@ -14,6 +13,14 @@ interface PaymentData {
     paidAmount: number;
     bookingReference: string;
     checkIn?: string;
+}
+
+interface PaymentResult {
+    success: boolean;
+    payment?: any;
+    error?: string;
+    shouldShowEmailDialog?: boolean; // NEW: Flag to show email dialog
+    newPaidAmount?: number; // NEW: For email generation
 }
 
 export const usePaymentProcessing = (supabase: any) => {
@@ -36,6 +43,15 @@ export const usePaymentProcessing = (supabase: any) => {
         }
     };
 
+    // Check if payment meets 50% threshold
+    const shouldTriggerEmailConfirmation = (
+        newPaidAmount: number,
+        totalAmount: number,
+    ): boolean => {
+        const percentagePaid = (newPaidAmount / totalAmount) * 100;
+        return percentagePaid >= 50;
+    };
+
     const uploadPaymentEvidence = async (file: File, bookingId: string) => {
         try {
             const fileExt = file.name.split(".").pop();
@@ -55,7 +71,7 @@ export const usePaymentProcessing = (supabase: any) => {
         }
     };
 
-    const processPayment = async (paymentData: PaymentData) => {
+    const processPayment = async (paymentData: PaymentData): Promise<PaymentResult> => {
         setIsSubmitting(true);
         setError("");
 
@@ -113,7 +129,7 @@ export const usePaymentProcessing = (supabase: any) => {
             const newPaidAmount = paymentData.paidAmount + paymentData.amount;
             const newPaymentStatus = newPaidAmount >= paymentData.totalAmount
                 ? "paid"
-                : "partially_paid";
+                : "partial";
 
             // Prepare booking update data
             const bookingUpdate: any = {
@@ -139,8 +155,19 @@ export const usePaymentProcessing = (supabase: any) => {
 
             if (updateError) throw updateError;
 
+            // Check if email confirmation should be shown
+            const showEmailDialog = shouldTriggerEmailConfirmation(
+                newPaidAmount,
+                paymentData.totalAmount
+            );
+
             setIsSubmitting(false);
-            return { success: true, payment: insertedPayment };
+            return { 
+                success: true, 
+                payment: insertedPayment,
+                shouldShowEmailDialog: showEmailDialog,
+                newPaidAmount: newPaidAmount
+            };
         } catch (err: any) {
             console.error("Error processing payment:", err);
             const errorMessage = err.message ||
