@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, Download, Send, Printer } from "lucide-react";
 import jsPDF from "jspdf";
 import { createInvoiceFromPayment } from "@/services/invoiceService";
+import { notifyRole } from "@/services/notificationService";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Payment {
@@ -186,6 +187,19 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
           title: "Success",
           description: "Invoice PDF downloaded successfully",
         });
+        // Notify admin on invoice download
+        try {
+          await notifyRole({
+            role: "admin",
+            title: "Invoice downloaded",
+            message: `Invoice ${invoiceNumber} downloaded`,
+            type: "info",
+            event: "invoice.downloaded",
+            metadata: { invoice_id: invoiceToUse?.id, invoice_number: invoiceNumber },
+          });
+        } catch (e) {
+          console.warn("Failed to notify admin on invoice download", e);
+        }
       } else if (action === "print") {
         pdf.autoPrint();
         window.open(pdf.output("bloburl"), "_blank");
@@ -193,6 +207,19 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
           title: "Success",
           description: "Invoice sent to printer",
         });
+        // Notify admin on invoice print
+        try {
+          await notifyRole({
+            role: "admin",
+            title: "Invoice printed",
+            message: `Invoice ${invoiceNumber} printed`,
+            type: "info",
+            event: "invoice.printed",
+            metadata: { invoice_id: invoiceToUse?.id, invoice_number: invoiceNumber },
+          });
+        } catch (e) {
+          console.warn("Failed to notify admin on invoice print", e);
+        }
       } else if (action === "email") {
         // TODO: Implement email sending
         // For now, just update status to "sent"

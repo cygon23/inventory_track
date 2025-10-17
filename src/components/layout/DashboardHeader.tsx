@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Bell, MessageSquare, Settings, LogOut, MapPin, Search, Menu } from 'lucide-react';
+import NotificationsBell from '@/components/NotificationsBell';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { roleColors } from '@/lib/constants';
@@ -71,12 +72,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onLogout, onMenuClick
       {/* Right side - Notifications and User Menu */}
       <div className="flex items-center space-x-2 md:space-x-4">
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative hidden sm:flex">
-          <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs px-1 min-w-[1.25rem] h-5">
-            3
-          </Badge>
-        </Button>
+        <NotificationsBell />
 
         {/* Messages */}
         <Button variant="ghost" size="sm" className="relative hidden sm:flex">

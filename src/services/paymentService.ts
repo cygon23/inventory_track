@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { notifyRole } from "@/services/notificationService";
 
 export interface Payment {
     id: string;
@@ -81,6 +82,19 @@ export const createPayment = async (paymentData: PaymentFormData) => {
     // If payment is completed, update booking's paid_amount
     if (paymentData.status === "completed") {
         await updateBookingPaidAmount(paymentData.booking_id);
+        // Notify finance officer when payment completed
+        try {
+            await notifyRole({
+                role: "finance_officer",
+                title: "Payment completed",
+                message: `${paymentData.customer_name} paid ${paymentData.amount} ${paymentData.currency}`,
+                type: "success",
+                event: "payment.completed",
+                metadata: { booking_id: paymentData.booking_id },
+            });
+        } catch (e) {
+            console.warn("Failed to notify finance on createPayment", e);
+        }
     }
 
     return data;
@@ -160,6 +174,19 @@ export const updatePaymentStatus = async (
 
         if (payment.data) {
             await updateBookingPaidAmount(payment.data.booking_id);
+        }
+        // Notify finance officer when payment marked completed
+        try {
+            await notifyRole({
+                role: "finance_officer",
+                title: "Payment completed",
+                message: `Payment ${paymentId} marked completed`,
+                type: "success",
+                event: "payment.completed",
+                metadata: { payment_id: paymentId },
+            });
+        } catch (e) {
+            console.warn("Failed to notify finance on updatePaymentStatus", e);
         }
     }
 
