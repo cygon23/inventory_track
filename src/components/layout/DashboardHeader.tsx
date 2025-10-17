@@ -15,6 +15,7 @@ import MessagesButton from "@/components/MessagesButton";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { roleColors } from "@/lib/constants";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
   onLogout: () => void;
@@ -47,6 +48,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
   };
+
+  const navigate = useNavigate();
 
   return (
     <header className='h-16 bg-card border-b border-border flex items-center justify-between px-4 md:px-6 shadow-warm relative z-30'>
@@ -121,7 +124,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end' className='w-56 bg-popover'>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
               <Settings className='mr-2 h-4 w-4' />
               Profile Settings
             </DropdownMenuItem>

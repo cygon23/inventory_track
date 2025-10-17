@@ -195,51 +195,51 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onClose, is
 
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <aside
-      className={cn(
-        "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-40",
-        isMobile
-          ? isOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
-          : "translate-x-0"
-      )}>
-      <div className='h-full flex flex-col overflow-hidden'>
-        {/* Scrollable nav container */}
-        <nav className='flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2'>
-          {visibleMenuItems.length === 0 && (
-            <div className='text-sm text-muted-foreground px-3 py-2'>
-              No menu items for role.
-            </div>
-          )}
-          {visibleMenuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.id}
-                to={item.path}
-                onClick={isMobile ? onClose : undefined}
-                className={cn(
-                  "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-                  isActive(item.path)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                )}>
-                <Icon className='h-5 w-5' />
-                <span className='flex-1'>{item.label}</span>
-                {item.badge && (
-                  <Badge variant='secondary' className='ml-auto text-xs'>
-                    {item.badge}
-                  </Badge>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
-    </aside>
-  );
+return (
+  <aside
+    className={cn(
+      "fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform duration-300 z-40",
+      isMobile
+        ? isOpen
+          ? "translate-x-0"
+          : "-translate-x-full"
+        : "translate-x-0"
+    )}>
+    <div className='h-full flex flex-col'>
+      {/* Scrollable nav container */}
+      <nav className='flex-1 overflow-y-auto p-4 space-y-2'>
+        {visibleMenuItems.length === 0 && (
+          <div className='text-sm text-muted-foreground px-3 py-2'>
+            No menu items for role.
+          </div>
+        )}
+        {visibleMenuItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.id}
+              to={item.path}
+              onClick={isMobile ? onClose : undefined}
+              className={cn(
+                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                isActive(item.path)
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}>
+              <Icon className='h-5 w-5' />
+              <span className='flex-1'>{item.label}</span>
+              {item.badge && (
+                <Badge variant='secondary' className='ml-auto text-xs'>
+                  {item.badge}
+                </Badge>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
+    </div>
+  </aside>
+);
 };
 
 export default DashboardSidebar;

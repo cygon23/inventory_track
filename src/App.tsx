@@ -35,6 +35,7 @@ import ForensicMonitoring from "./components/admin/ForensicMonitoring";
 import AttendanceManagement from "./components/staff/AttendanceManagement";
 import { Loader2 } from "lucide-react";
 import AllBookings from "./pages/AllBookings";
+import ProfilePage from "./pages/ProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,17 @@ const AppRoutes: React.FC = () => {
           )
         }
       />
+
+      {/* Universal Profile Route - works for all roles */}
+      <Route
+        path='/profile'
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }>
+        <Route index element={<ProfilePage />} />
+      </Route>
 
       {/* Admin Routes */}
       <Route
