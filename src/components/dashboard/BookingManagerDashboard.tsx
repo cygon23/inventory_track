@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase";
 import ViewQuoteDialog from "@/components/booking/ViewQuoteDialog";
 import SendQuoteDialog from "@/components/booking/SendQuoteDialog";
 import { useNavigate } from "react-router-dom";
+import { useUrgentMessages } from "@/hooks/useUrgentMessages";
 
 const BookingManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const BookingManagerDashboard: React.FC = () => {
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [activeBookingsCount, setActiveBookingsCount] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const { urgentMessages, loading: messagesLoading } = useUrgentMessages();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,8 +100,10 @@ const BookingManagerDashboard: React.FC = () => {
     },
     {
       title: "Customer Messages",
-      value: "15",
-      change: "5 unread",
+      value: urgentMessages.length.toString(),
+      change: `${
+        urgentMessages.filter((m) => m.unread_count > 0).length
+      } unread`,
       icon: MessageSquare,
       color: "text-destructive",
     },
@@ -187,6 +191,19 @@ const BookingManagerDashboard: React.FC = () => {
 
   const handleQuoteSuccess = () => {
     console.log("Quote sent successfully");
+  };
+
+  const formatTime = (timestamp: string) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString();
   };
 
   return (
@@ -281,65 +298,76 @@ const BookingManagerDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         {/* Pending Quotes (static) */}
         <Card className='safari-card'>
           <CardHeader>
             <CardTitle className='flex items-center justify-between text-lg'>
               <span className='flex items-center'>
-                <Clock className='h-5 w-5 mr-2 text-warning' />
-                Pending Quotes
+                <MessageSquare className='h-5 w-5 mr-2 text-primary' />
+                Recent Customer Conversations
               </span>
-              <Button variant='outline' size='sm'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => navigate("/finance/messages")}>
                 View All
               </Button>
             </CardTitle>
             <CardDescription>
-              Customer inquiries waiting for quotes
+              Active conversations requiring attention
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className='space-y-4'>
-              {pendingQuotes.map((quote) => (
-                <div
-                  key={quote.id}
-                  className='flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg space-y-2 sm:space-y-0'>
-                  <div className='flex items-center space-x-3'>
-                    <div className='w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center'>
-                      <DollarSign className='h-5 w-5 text-warning' />
-                    </div>
-                    <div className='min-w-0 flex-1'>
-                      <p className='font-medium text-sm sm:text-base'>
-                        {quote.customer}
-                      </p>
-                      <p className='text-xs sm:text-sm text-muted-foreground'>
-                        {quote.inquiry}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        Budget: {quote.budget} • {quote.requested}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex flex-col sm:items-end space-y-2'>
-                    <Badge className={getPriorityColor(quote.priority)}>
-                      {quote.priority}
-                    </Badge>
-                    <div className='flex space-x-2'>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => handleViewQuote(quote)}>
-                        <Eye className='h-4 w-4 mr-1' />
-                        View
-                      </Button>
-                      <Button size='sm' onClick={() => handleSendQuote(quote)}>
-                        <Send className='h-4 w-4 mr-1' />
-                        Quote
-                      </Button>
-                    </div>
-                  </div>
+              {messagesLoading ? (
+                <div className='flex justify-center py-4'>
+                  <div className='h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent' />
                 </div>
-              ))}
+              ) : urgentMessages.length === 0 ? (
+                <p className='text-center text-muted-foreground py-4'>
+                  No active conversations
+                </p>
+              ) : (
+                urgentMessages.map((message) => (
+                  <div
+                    key={message.conversation_id}
+                    className='flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg space-y-2 sm:space-y-0 cursor-pointer hover:bg-accent transition-colors'
+                    onClick={() => navigate("/finance/messages")}>
+                    <div className='flex items-center space-x-3'>
+                      <div className='w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center'>
+                        <MessageSquare className='h-5 w-5 text-primary' />
+                      </div>
+                      <div className='min-w-0 flex-1'>
+                        <p className='font-medium text-sm sm:text-base'>
+                          {message.customer_name}
+                        </p>
+                        <p className='text-xs sm:text-sm text-muted-foreground truncate'>
+                          {message.subject}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {message.last_message_preview ||
+                            "No preview available"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex flex-col sm:items-end space-y-2'>
+                      <div className='flex items-center space-x-2'>
+                        <Badge className={getPriorityColor(message.priority)}>
+                          {message.priority}
+                        </Badge>
+                        {message.unread_count > 0 && (
+                          <Badge variant='destructive'>
+                            {message.unread_count} unread
+                          </Badge>
+                        )}
+                      </div>
+                      <p className='text-xs text-muted-foreground'>
+                        {formatTime(message.last_message_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

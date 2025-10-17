@@ -22,35 +22,14 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useNavigate } from "react-router-dom";
+import { useUrgentMessages } from "@/hooks/useUrgentMessages";
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { loading, stats, recentBookings } = useDashboardData();
 
-  const urgentMessages = [
-    {
-      id: 1,
-      customer: "Anna Johansson",
-      type: "complaint",
-      priority: "urgent",
-      time: "2h ago",
-    },
-    {
-      id: 2,
-      customer: "Emma Thompson",
-      type: "payment_issue",
-      priority: "high",
-      time: "4h ago",
-    },
-    {
-      id: 3,
-      customer: "John Smith",
-      type: "booking_inquiry",
-      priority: "medium",
-      time: "6h ago",
-    },
-  ];
+  const { urgentMessages, loading: messagesLoading } = useUrgentMessages();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -91,8 +70,8 @@ const AdminDashboard: React.FC = () => {
     },
     {
       title: "Unread Messages",
-      value: "23",
-      change: "+3",
+      value: stats.unreadMessages.toString(),
+      change: `+${stats.unreadMessagesChange}`,
       icon: MessageSquare,
       color: "text-red-600",
     },
@@ -130,6 +109,19 @@ const AdminDashboard: React.FC = () => {
       </div>
     );
   }
+
+  const formatTime = (timestamp: string) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className='space-y-6'>
@@ -225,7 +217,10 @@ const AdminDashboard: React.FC = () => {
                 <AlertTriangle className='h-5 w-5 mr-2 text-orange-500' />
                 Urgent Messages
               </span>
-              <Button variant='outline' size='sm'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => navigate("/finance/messages")}>
                 View All
               </Button>
             </CardTitle>
@@ -235,31 +230,42 @@ const AdminDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className='space-y-4'>
-              {urgentMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className='flex items-center justify-between p-3 border border-border rounded-lg'>
-                  <div className='flex items-center space-x-3'>
-                    <div className='w-10 h-10 bg-red-50 rounded-full flex items-center justify-center'>
-                      <MessageSquare className='h-5 w-5 text-red-600' />
+              {messagesLoading ? (
+                <div className='flex justify-center py-4'>
+                  <Loader2 className='h-6 w-6 animate-spin' />
+                </div>
+              ) : urgentMessages.length === 0 ? (
+                <p className='text-center text-muted-foreground py-4'>
+                  No urgent messages
+                </p>
+              ) : (
+                urgentMessages.map((message) => (
+                  <div
+                    key={message.conversation_id}
+                    className='flex items-center justify-between p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors'
+                    onClick={() => navigate("/finance/messages")}>
+                    <div className='flex items-center space-x-3'>
+                      <div className='w-10 h-10 bg-red-50 rounded-full flex items-center justify-center'>
+                        <MessageSquare className='h-5 w-5 text-red-600' />
+                      </div>
+                      <div>
+                        <p className='font-medium'>{message.customer_name}</p>
+                        <p className='text-sm text-muted-foreground'>
+                          {message.subject}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className='font-medium'>{message.customer}</p>
-                      <p className='text-sm text-muted-foreground capitalize'>
-                        {message.type.replace("_", " ")}
+                    <div className='text-right'>
+                      <Badge className={getPriorityColor(message.priority)}>
+                        {message.priority}
+                      </Badge>
+                      <p className='text-xs text-muted-foreground mt-1'>
+                        {formatTime(message.last_message_at)}
                       </p>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <Badge className={getPriorityColor(message.priority)}>
-                      {message.priority}
-                    </Badge>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      {message.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

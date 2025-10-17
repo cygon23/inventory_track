@@ -8,6 +8,8 @@ interface DashboardStats {
     activeCustomersChange: number;
     monthlyRevenue: number;
     monthlyRevenueChange: number;
+    unreadMessages: number;  
+    unreadMessagesChange: number;  
 }
 
 interface Booking {
@@ -30,6 +32,8 @@ export const useDashboardData = () => {
         activeCustomersChange: 0,
         monthlyRevenue: 0,
         monthlyRevenueChange: 0,
+        unreadMessages: 0, 
+        unreadMessagesChange: 0, 
     });
     const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -96,6 +100,13 @@ export const useDashboardData = () => {
         return data || [];
     };
 
+    const fetchUnreadMessages = async () => {
+    const { data } = await supabase
+        .from('conversation_details')
+        .select('unread_count');
+    return data?.reduce((sum, conv) => sum + conv.unread_count, 0) || 0;
+};
+
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
@@ -116,6 +127,7 @@ export const useDashboardData = () => {
                 thisMonthRevenue,
                 lastMonthRevenue,
                 bookingsData,
+                unreadMessages, 
             ] = await Promise.all([
                 fetchBookingsCount(firstDayOfMonth, lastDayOfMonth),
                 fetchBookingsCount(firstDayOfLastMonth, lastDayOfLastMonth),
@@ -124,6 +136,7 @@ export const useDashboardData = () => {
                 fetchRevenue(firstDayOfMonth, lastDayOfMonth),
                 fetchRevenue(firstDayOfLastMonth, lastDayOfLastMonth),
                 fetchRecentBookings(),
+                fetchUnreadMessages(),
             ]);
 
             setStats({
@@ -142,6 +155,8 @@ export const useDashboardData = () => {
                     thisMonthRevenue,
                     lastMonthRevenue,
                 ),
+                 unreadMessages,
+                 unreadMessagesChange: 0,  
             });
 
             setRecentBookings(bookingsData);
