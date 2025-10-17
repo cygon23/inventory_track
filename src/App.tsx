@@ -36,6 +36,8 @@ import AttendanceManagement from "./components/staff/AttendanceManagement";
 import { Loader2 } from "lucide-react";
 import AllBookings from "./pages/AllBookings";
 import ProfilePage from "./pages/ProfilePage";
+import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./components/auth/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +86,8 @@ const AppRoutes: React.FC = () => {
     <Routes>
       <Route path='/nav' element={<NavigationSwitcher />} />
       <Route path='/login' element={<LoginPage />} />
+      <Route path='/forgot-password' element={<ForgotPasswordPage />} />
+      <Route path='/reset-password' element={<ResetPasswordPage />} />
       <Route
         path='/'
         element={
@@ -99,7 +103,7 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Universal Profile Route - works for all roles */}
+      {/* Universal Profile Route*/}
       <Route
         path='/profile'
         element={

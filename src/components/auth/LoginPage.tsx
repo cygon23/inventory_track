@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { MapPin, Users, Shield, Loader2, Eye, EyeOff } from "lucide-react";
+import { MapPin, Users, Shield, Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 const LoginPage: React.FC = () => {
@@ -24,6 +24,15 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, user, loading } = useAuth();
+
+  // Load saved email if "Remember Me" was checked
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -38,7 +47,6 @@ const LoginPage: React.FC = () => {
       };
 
       const route = dashboardRoutes[user.role] || "/admin/dashboard";
-      console.log("LoginPage: Redirecting to", route);
       navigate(route, { replace: true });
     }
   }, [user, loading, navigate]);
@@ -51,12 +59,26 @@ const LoginPage: React.FC = () => {
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const result = await signIn(email, password);
 
       if (result.success) {
+        // Handle "Remember Me" functionality
+        if (rememberMe) {
+          localStorage.setItem("rememberedEmail", email);
+        } else {
+          localStorage.removeItem("rememberedEmail");
+        }
+
         toast.success("Login successful! Redirecting...");
       } else {
         toast.error(result.error || "Login failed. Please try again.");
@@ -73,7 +95,7 @@ const LoginPage: React.FC = () => {
     return (
       <div className='min-h-screen bg-gradient-warm flex items-center justify-center'>
         <div className='flex items-center space-x-2'>
-          <Loader2 className='h-6 w-6 animate-spin' />
+          <Loader2 className='h-6 w-6 animate-spin text-primary' />
           <span>Loading...</span>
         </div>
       </div>
@@ -84,16 +106,12 @@ const LoginPage: React.FC = () => {
     <div className='min-h-screen bg-gradient-warm flex items-center justify-center p-4'>
       <div className='w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center'>
         <div className='text-center lg:text-left space-y-6'>
-          <div className='flex items-center justify-center lg:justify-start space-x-3'>
-            <div className='w-12 h-12 bg-gradient-safari rounded-xl flex items-center justify-center'>
-              <MapPin className='h-6 w-6 text-white' />
-            </div>
-            <div>
-              <h1 className='text-3xl font-bold text-foreground'>
-                Lion Track Safari
-              </h1>
-              <p className='text-muted-foreground'>Booking Management System</p>
-            </div>
+          <div className='flex items-center justify-center lg:justify-start'>
+            <img
+              src='/LION-TRACK-LOGO-FINAL-01.svg'
+              alt='Lion Track Safari'
+              className='h-16 w-auto'
+            />
           </div>
 
           <div className='space-y-4'>
@@ -108,20 +126,20 @@ const LoginPage: React.FC = () => {
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-8'>
             <div className='flex items-center space-x-3 p-4 bg-card rounded-lg border'>
-              <Users className='h-8 w-8 text-primary' />
+              <Zap className='h-8 w-8 text-primary' />
               <div>
-                <h3 className='font-semibold'>Role-Based Access</h3>
+                <h3 className='font-semibold'>Lightning Fast</h3>
                 <p className='text-sm text-muted-foreground'>
-                  8 different user roles
+                  Quick access to all features
                 </p>
               </div>
             </div>
             <div className='flex items-center space-x-3 p-4 bg-card rounded-lg border'>
               <Shield className='h-8 w-8 text-primary' />
               <div>
-                <h3 className='font-semibold'>Secure & Reliable</h3>
+                <h3 className='font-semibold'>Always Secure</h3>
                 <p className='text-sm text-muted-foreground'>
-                  Enterprise-grade security
+                  Bank-level encryption
                 </p>
               </div>
             </div>
@@ -149,11 +167,20 @@ const LoginPage: React.FC = () => {
                   required
                   disabled={isLoading}
                   className='w-full'
+                  autoComplete='email'
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='password'>Password</Label>
+                <div className='flex items-center justify-between'>
+                  <Label htmlFor='password'>Password</Label>
+                  <Link
+                    to='/forgot-password'
+                    className='text-xs text-primary hover:underline'
+                    tabIndex={-1}>
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className='relative'>
                   <Input
                     id='password'
@@ -164,6 +191,7 @@ const LoginPage: React.FC = () => {
                     required
                     disabled={isLoading}
                     className='w-full pr-10'
+                    autoComplete='current-password'
                   />
                   <Button
                     type='button'
@@ -171,7 +199,8 @@ const LoginPage: React.FC = () => {
                     size='sm'
                     className='absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent'
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}>
+                    disabled={isLoading}
+                    tabIndex={-1}>
                     {showPassword ? (
                       <EyeOff className='h-4 w-4' />
                     ) : (
@@ -190,8 +219,8 @@ const LoginPage: React.FC = () => {
                   }
                   disabled={isLoading}
                 />
-                <Label htmlFor='remember' className='text-sm'>
-                  Remember me
+                <Label htmlFor='remember' className='text-sm cursor-pointer'>
+                  Remember my email
                 </Label>
               </div>
             </CardContent>
@@ -211,18 +240,9 @@ const LoginPage: React.FC = () => {
                 )}
               </Button>
 
-              <div className='text-center space-y-2'>
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='sm'
-                  disabled={isLoading}>
-                  Forgot Password?
-                </Button>
-                <p className='text-xs text-muted-foreground'>
-                  Contact your administrator for account access
-                </p>
-              </div>
+              <p className='text-xs text-center text-muted-foreground'>
+                Contact your administrator for account access
+              </p>
             </CardFooter>
           </form>
         </Card>
