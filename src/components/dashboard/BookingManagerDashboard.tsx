@@ -21,8 +21,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import ViewQuoteDialog from "@/components/booking/ViewQuoteDialog";
 import SendQuoteDialog from "@/components/booking/SendQuoteDialog";
+import { useNavigate } from "react-router-dom";
 
 const BookingManagerDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [viewQuoteOpen, setViewQuoteOpen] = useState(false);
   const [sendQuoteOpen, setSendQuoteOpen] = useState(false);
@@ -232,7 +234,10 @@ const BookingManagerDashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className='flex items-center justify-between text-lg'>
               My Recent Bookings
-              <Button variant='outline' size='sm'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => navigate("/finance/bookings")}>
                 View All
               </Button>
             </CardTitle>
@@ -242,7 +247,7 @@ const BookingManagerDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className='space-y-4'>
-              {recentBookings.map((booking) => (
+              {recentBookings.slice(0, 5).map((booking) => (
                 <div
                   key={booking.id}
                   className='flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg space-y-2 sm:space-y-0'>

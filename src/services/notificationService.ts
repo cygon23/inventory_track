@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-import { roleColors } from "@/lib/constants";
 
 export type NotificationType = "info" | "success" | "warning" | "error";
 
@@ -9,7 +8,7 @@ export interface AppNotification {
   title: string;
   message: string;
   type: NotificationType;
-  event: string; // e.g., booking.created, payment.completed
+  event: string;
   target_user_id: string;
   actor_user_id?: string | null;
   metadata: Record<string, any>;
@@ -54,7 +53,7 @@ export async function notifyUser(params: {
 }
 
 export async function notifyRole(params: {
-  role: string; // e.g., 'admin', 'finance_officer', 'operations_coordinator', 'driver'
+  role: string;
   title: string;
   message: string;
   type?: NotificationType;
@@ -84,19 +83,61 @@ export async function notifyRole(params: {
 }
 
 export async function markNotificationRead(notificationId: string) {
-  const { error } = await supabase
+  // Verify user is authenticated
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error("User not authenticated:", authError);
+    throw new Error("You must be logged in to mark notifications as read");
+  }
+
+  console.log("🔍 Marking notification as read:", { 
+    notificationId, 
+    authUserId: user.id,
+    userEmail: user.email 
+  });
+
+  const { data, error, count } = await supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
-    .eq("id", notificationId);
-  if (error) throw error;
+    .eq("id", notificationId)
+    .select();
+  
+  // console.log(" Update result:", { data, error, count, affectedRows: data?.length });
+  
+  // if (error) {
+  //   console.error("Error marking notification as read:", error);
+  //   throw error;
+  // }
+  
+  // if (!data || data.length === 0) {
+  //   console.warn(" No rows updated - RLS may be blocking this update");
+  //   throw new Error("Failed to update notification - permission denied or notification not found");
+  // }
+  
+  return data[0];
 }
 
 export async function dismissNotification(notificationId: string) {
+  // Verify user is authenticated
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error("User not authenticated:", authError);
+    throw new Error("You must be logged in to dismiss notifications");
+  }
+
+  console.log("Dismissing notification:", { notificationId, userId: user.id });
+
   const { error } = await supabase
     .from("notifications")
     .update({ dismissed_at: new Date().toISOString() })
     .eq("id", notificationId);
-  if (error) throw error;
+  
+  if (error) {
+    console.error("Error dismissing notification:", error);
+    throw error;
+  }
 }
 
 export async function listUnreadNotifications() {
