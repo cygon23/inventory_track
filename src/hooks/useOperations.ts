@@ -367,6 +367,48 @@ export const useOperations = () => {
             // Refresh data
             await fetchAllData();
 
+            // Post-notifications (admin + driver)
+            try {
+                // notify admin/helper/coordinator roles via RPC insert into notifications
+                // We cannot import app services here; use direct inserts
+                const { data: driverUser } = await supabase
+                  .from('drivers')
+                  .select('user_id')
+                  .eq('id', driverId)
+                  .single();
+
+                const targetsRes = await supabase
+                  .from('users')
+                  .select('id, role')
+                  .in('role', ['admin', 'admin_helper', 'operations_coordinator']);
+
+                const targetIds = (targetsRes.data || []).map(u => u.id);
+                const payloads = [
+                  ...targetIds.map(id => ({
+                    target_user_id: id,
+                    title: 'Trip assigned',
+                    message: `Trip ${tripId} assigned to driver`,
+                    type: 'info',
+                    event: 'trip.assigned',
+                    metadata: { trip_id: tripId, driver_id: driverId, vehicle_id: vehicleId },
+                  })),
+                  ...(driverUser?.user_id ? [{
+                    target_user_id: driverUser.user_id,
+                    title: 'New trip assigned',
+                    message: 'You have been assigned a new trip',
+                    type: 'success',
+                    event: 'trip.assigned.to_driver',
+                    metadata: { trip_id: tripId, vehicle_id: vehicleId },
+                  }] : []),
+                ];
+
+                if (payloads.length > 0) {
+                  await supabase.from('notifications').insert(payloads);
+                }
+            } catch (e) {
+                console.warn('Failed to send assignment notifications', e);
+            }
+
             return { success: true };
         } catch (err: any) {
             console.error("Error assigning resources:", err);

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { notifyRole } from "@/services/notificationService";
 
 export interface BookingFormData {
     customerCustomId?: string; // LT-XXXX format
@@ -216,6 +217,36 @@ class BookingService {
 
             if (bookingError) {
                 return { data: null, error: bookingError };
+            }
+
+            // Notify Admins on new booking creation
+            try {
+                await notifyRole({
+                    role: "admin",
+                    title: "New booking created",
+                    message: `${booking?.customer_name} - ${booking?.safari_package}`,
+                    type: "info",
+                    event: "booking.created",
+                    metadata: { booking_id: booking?.id, booking_reference: booking?.booking_reference },
+                });
+            } catch (e) {
+                console.warn("Failed to send admin notification for booking.create", e);
+            }
+
+            // If unassigned booking arrives (no driver), notify operations coordinator
+            try {
+                if (!booking?.assigned_driver) {
+                    await notifyRole({
+                        role: "operations_coordinator",
+                        title: "New unassigned booking",
+                        message: `Booking ${booking?.booking_reference} requires driver assignment`,
+                        type: "warning",
+                        event: "booking.unassigned",
+                        metadata: { booking_id: booking?.id },
+                    });
+                }
+            } catch (e) {
+                console.warn("Failed to send operations notification for booking.unassigned", e);
             }
 
             return { data: booking, error: null };
