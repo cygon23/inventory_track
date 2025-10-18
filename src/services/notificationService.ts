@@ -91,29 +91,11 @@ export async function markNotificationRead(notificationId: string) {
     throw new Error("You must be logged in to mark notifications as read");
   }
 
-  console.log("🔍 Marking notification as read:", { 
-    notificationId, 
-    authUserId: user.id,
-    userEmail: user.email 
-  });
-
   const { data, error, count } = await supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", notificationId)
     .select();
-  
-  // console.log(" Update result:", { data, error, count, affectedRows: data?.length });
-  
-  // if (error) {
-  //   console.error("Error marking notification as read:", error);
-  //   throw error;
-  // }
-  
-  // if (!data || data.length === 0) {
-  //   console.warn(" No rows updated - RLS may be blocking this update");
-  //   throw new Error("Failed to update notification - permission denied or notification not found");
-  // }
   
   return data[0];
 }
@@ -123,11 +105,8 @@ export async function dismissNotification(notificationId: string) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError || !user) {
-    console.error("User not authenticated:", authError);
     throw new Error("You must be logged in to dismiss notifications");
   }
-
-  console.log("Dismissing notification:", { notificationId, userId: user.id });
 
   const { error } = await supabase
     .from("notifications")

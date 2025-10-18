@@ -354,23 +354,20 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
             <Separator />
 
             {/* Payment Information */}
-            {/* <div>
+            <div>
               <p className='text-sm font-semibold mb-2 text-[#735741]'>
                 Payment Information:
               </p>
               <div className='text-xs space-y-1 text-muted-foreground'>
                 <p>BANK NAME: NMB BANK PLC</p>
                 <p>SWIFT CODE: NMIBTZTZ</p>
-                <p>BRANCH CODE: 428</p>
-                <p>ACCOUNT NUMBER (EURO): 42810015688</p>
-                <p>ACCOUNT NUMBER (USD): 42810013862</p>
                 <p>ACCOUNT NAME: LION TRACK SAFARI</p>
                 <p className='mt-2'>
                   <span className='font-semibold text-[#735741]'>
                     Secure Online Payment:{" "}
                   </span>
                   <a
-                    href='https://store.pesapal.com/liontracksafaricompany'
+                    href='#'
                     target='_blank'
                     rel='noopener noreferrer'
                     className='text-blue-600 hover:underline'>
@@ -378,7 +375,7 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
                   </a>
                 </p>
               </div>
-            </div> */}
+            </div>
 
             {notes && (
               <>
