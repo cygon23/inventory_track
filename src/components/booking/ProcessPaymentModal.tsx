@@ -31,9 +31,9 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePaymentProcessing } from "@/hooks/usePaymentProcessing";
-import { useEmailGeneration } from "@/hooks/useEmailGeneration";
+import { usePDFGeneration } from "@/hooks/usePDFGeneration";
 import { supabase } from "@/lib/supabase";
-import EmailConfirmationDialog from "../EmailConfirmationDialog";
+import PDFConfirmationDialog from "../PDFConfirmationDialog";
 
 interface ProcessPaymentDialogProps {
   open: boolean;
@@ -54,13 +54,17 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
   const [paymentNotes, setPaymentNotes] = useState<string>("");
   const [mobileProvider, setMobileProvider] = useState<string>("m_pesa");
   const [paymentEvidence, setPaymentEvidence] = useState<File | null>(null);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showPDFDialog, setShowPDFDialog] = useState(false);
 
   const { processPayment, isSubmitting, error, resetError } =
     usePaymentProcessing(supabase);
 
-  const { emailData, generateConfirmationEmail, resetEmailData } =
-    useEmailGeneration();
+  const {
+    pdfData,
+    generateConfirmationPDF,
+    downloadConfirmationPDF,
+    resetPDFData,
+  } = usePDFGeneration();
 
   useEffect(() => {
     if (booking && open) {
@@ -72,7 +76,7 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
       setPaymentNotes("");
       setMobileProvider("m_pesa");
       setPaymentEvidence(null);
-      resetEmailData();
+      resetPDFData();
     }
   }, [booking, open]);
 
@@ -120,11 +124,9 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
 
     if (result.success) {
       if (result.shouldShowEmailDialog && result.newPaidAmount) {
-        const emailContent = generateConfirmationEmail(
-          booking,
-          result.newPaidAmount
-        );
-        setShowEmailDialog(true);
+        // Generate PDF instead of email
+        await generateConfirmationPDF(booking, result.newPaidAmount);
+        setShowPDFDialog(true);
       }
 
       if (onSuccess) onSuccess();
@@ -140,10 +142,10 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
     }
   };
 
-  const handleEmailDialogClose = (open: boolean) => {
-    setShowEmailDialog(open);
+  const handlePDFDialogClose = (open: boolean) => {
+    setShowPDFDialog(open);
     if (!open) {
-      resetEmailData();
+      resetPDFData();
     }
   };
 
@@ -505,9 +507,8 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
                 <Alert>
                   <AlertCircle className='h-4 w-4' />
                   <AlertDescription className='text-sm'>
-                    This is a UI preview. Payment gateway integration will be
-                    added later. The booking record will be updated with this
-                    payment information.
+                    After payment is recorded, a PDF confirmation will be
+                    generated that you can download and send to your customer.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -544,10 +545,14 @@ const ProcessPaymentDialog: React.FC<ProcessPaymentDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      <EmailConfirmationDialog
-        open={showEmailDialog}
-        onOpenChange={handleEmailDialogClose}
-        emailData={emailData}
+      <PDFConfirmationDialog
+        open={showPDFDialog}
+        onOpenChange={handlePDFDialogClose}
+        pdfData={pdfData}
+        onDownload={() => {
+          console.log("onDownload prop called in ProcessPaymentDialog");
+          downloadConfirmationPDF();
+        }}
       />
     </>
   );
