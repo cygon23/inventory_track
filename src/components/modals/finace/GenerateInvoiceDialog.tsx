@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Download, Send, Printer } from "lucide-react";
-import jsPDF from "jspdf";
+import {
+  generateInvoicePDF,
+  downloadInvoicePDF,
+  printInvoicePDF,
+} from "@/lib/invoicePdfGenerator";
 import { createInvoiceFromPayment } from "@/services/invoiceService";
 import { notifyRole } from "@/services/notificationService";
 import { useToast } from "@/components/ui/use-toast";
@@ -58,91 +62,6 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
 
   if (!payment) return null;
 
-  // Generate PDF from invoice data
-  const generatePDF = (invoiceNum: string) => {
-    const pdf = new jsPDF();
-
-    // Company Header
-    pdf.setFontSize(20);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("INVOICE", 105, 20, { align: "center" });
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text("Safari Adventures Tanzania", 105, 28, { align: "center" });
-    pdf.text("Arusha, Tanzania", 105, 33, { align: "center" });
-    pdf.text("info@liontracksafari.com", 105, 38, { align: "center" });
-
-    // Invoice Details
-    pdf.setFontSize(12);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(`Invoice #: ${invoiceNum}`, 20, 55);
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, 20, 62);
-    pdf.text(
-      `Due Date: ${new Date(payment.due_date).toLocaleDateString()}`,
-      20,
-      68
-    );
-
-    // Bill To
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Bill To:", 20, 82);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(payment.customer_name, 20, 88);
-    pdf.text(
-      `Booking: ${payment.bookings?.booking_reference || "N/A"}`,
-      20,
-      94
-    );
-    pdf.text(`Email: ${payment.bookings?.customer_email || "N/A"}`, 20, 100);
-
-    // Table Header
-    pdf.setFillColor(240, 240, 240);
-    pdf.rect(20, 115, 170, 8, "F");
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Description", 22, 120);
-    pdf.text("Type", 110, 120);
-    pdf.text("Qty", 140, 120);
-    pdf.text("Amount", 160, 120);
-
-    // Table Row
-    pdf.setFont("helvetica", "normal");
-    pdf.text(payment.description, 22, 130);
-    pdf.text(payment.type.replace("_", " "), 110, 130);
-    pdf.text("1", 140, 130);
-    pdf.text(formatCurrency(payment.amount, payment.currency), 160, 130);
-
-    // Totals
-    const taxAmount = payment.amount * 0.18;
-    const totalAmount = payment.amount + taxAmount;
-
-    pdf.line(20, 138, 190, 138);
-    pdf.text("Subtotal:", 130, 145);
-    pdf.text(formatCurrency(payment.amount, payment.currency), 165, 145);
-
-    pdf.text("Tax (18%):", 130, 152);
-    pdf.text(formatCurrency(taxAmount, payment.currency), 165, 152);
-
-    pdf.setFont("helvetica", "bold");
-    pdf.line(130, 156, 190, 156);
-    pdf.text("Total:", 130, 163);
-    pdf.text(formatCurrency(totalAmount, payment.currency), 165, 163);
-
-    // Notes
-    if (notes) {
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      pdf.text("Notes:", 20, 180);
-      const splitNotes = pdf.splitTextToSize(notes, 170);
-      pdf.text(splitNotes, 20, 186);
-    }
-
-    return pdf;
-  };
-
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -150,14 +69,12 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
     }).format(amount);
   };
 
-  // MAIN FUNCTION: Save to DB first, then generate PDF
+  // MAIN FUNCTION: Save to DB first
   const handleGenerate = async (action: "download" | "email" | "print") => {
     setIsGenerating(true);
-
     try {
-      // STEP 1: Save invoice to database (if not already saved)
+      //Save invoice to database (if not already saved)
       let invoiceToUse = savedInvoice;
-
       if (!invoiceToUse) {
         toast({
           title: "Saving Invoice",
@@ -170,23 +87,41 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
         });
 
         setSavedInvoice(invoiceToUse);
-
         toast({
           title: "Invoice Saved",
           description: `Invoice ${invoiceNumber} created successfully`,
         });
       }
 
-      // STEP 2: Generate PDF
-      const pdf = generatePDF(invoiceNumber);
+      // Generate PDF 
+      const invoiceDetails = {
+        invoiceNumber: invoiceNumber,
+        invoiceDate: new Date().toISOString(),
+        dueDate: payment.due_date,
+        customerName: payment.customer_name,
+        customerEmail: payment.bookings?.customer_email || "N/A",
+        customerAddress: undefined, // Optional - can be added if available
+        bookingReference: payment.bookings?.booking_reference,
+        items: [
+          {
+            description: payment.description,
+            quantity: 1,
+            priceUSD: payment.amount,
+          },
+        ],
+        notes: notes,
+      };
 
-      // STEP 3: Perform action
+      const pdf = generateInvoicePDF(invoiceDetails);
+
+      //Perform action
       if (action === "download") {
-        pdf.save(`invoice-${invoiceNumber}.pdf`);
+        downloadInvoicePDF(pdf, `invoice-${invoiceNumber}.pdf`);
         toast({
           title: "Success",
           description: "Invoice PDF downloaded successfully",
         });
+
         // Notify admin on invoice download
         try {
           await notifyRole({
@@ -195,18 +130,21 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
             message: `Invoice ${invoiceNumber} downloaded`,
             type: "info",
             event: "invoice.downloaded",
-            metadata: { invoice_id: invoiceToUse?.id, invoice_number: invoiceNumber },
+            metadata: {
+              invoice_id: invoiceToUse?.id,
+              invoice_number: invoiceNumber,
+            },
           });
         } catch (e) {
           console.warn("Failed to notify admin on invoice download", e);
         }
       } else if (action === "print") {
-        pdf.autoPrint();
-        window.open(pdf.output("bloburl"), "_blank");
+        printInvoicePDF(pdf);
         toast({
           title: "Success",
           description: "Invoice sent to printer",
         });
+
         // Notify admin on invoice print
         try {
           await notifyRole({
@@ -215,19 +153,20 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
             message: `Invoice ${invoiceNumber} printed`,
             type: "info",
             event: "invoice.printed",
-            metadata: { invoice_id: invoiceToUse?.id, invoice_number: invoiceNumber },
+            metadata: {
+              invoice_id: invoiceToUse?.id,
+              invoice_number: invoiceNumber,
+            },
           });
         } catch (e) {
           console.warn("Failed to notify admin on invoice print", e);
         }
       } else if (action === "email") {
         // TODO: Implement email sending
-        // For now, just update status to "sent"
-        // await updateInvoiceStatus(invoiceToUse.id, "sent");
-        // toast({
-        //   title: "Success",
-        //   description: "Invoice marked as sent (email integration pending)",
-        // });
+        toast({
+          title: "Info",
+          description: "Email functionality coming soon",
+        });
       }
 
       // STEP 4: Callback to parent
@@ -260,9 +199,6 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
     }
   };
 
-  const taxAmount = payment.amount * 0.18;
-  const totalAmount = payment.amount + taxAmount;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
@@ -272,7 +208,7 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
             Generate Invoice
           </DialogTitle>
           <DialogDescription>
-            Create and send an invoice for this payment
+            Create a professional invoice for this payment
           </DialogDescription>
         </DialogHeader>
 
@@ -319,12 +255,17 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
                 </p>
               </div>
               <div className='text-right'>
-                <p className='font-semibold'>Safari Adventures Tanzania</p>
-                <p className='text-sm text-muted-foreground'>
-                  Arusha, Tanzania
+                <p className='font-semibold text-[#735741]'>
+                  Lion Track Safari
                 </p>
                 <p className='text-sm text-muted-foreground'>
-                  info@safariadvtz.com
+                  Arusha - Tanzania
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Tel: +255 782 247 376
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  info@liontracksafari.com
                 </p>
               </div>
             </div>
@@ -333,26 +274,29 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
 
             <div className='grid grid-cols-2 gap-8'>
               <div>
-                <p className='text-sm font-semibold mb-2'>Bill To:</p>
-                <p className='font-medium'>{payment.customer_name}</p>
-                <p className='text-sm text-muted-foreground'>
-                  Booking: {payment.bookings?.booking_reference || "N/A"}
+                <p className='text-sm font-semibold mb-2 text-[#735741]'>
+                  Bill To:
                 </p>
+                <p className='font-medium'>{payment.customer_name}</p>
                 <p className='text-sm text-muted-foreground'>
                   Email: {payment.bookings?.customer_email || "N/A"}
                 </p>
+                <p className='text-sm text-muted-foreground'>
+                  Booking: {payment.bookings?.booking_reference || "N/A"}
+                </p>
               </div>
+
               <div className='text-right'>
                 <div className='space-y-1'>
                   <div className='flex justify-between'>
                     <span className='text-sm text-muted-foreground'>
-                      Issue Date:
+                      Invoice Date:
                     </span>
                     <span className='text-sm font-medium'>
                       {new Date().toLocaleDateString("en-US", {
                         year: "numeric",
-                        month: "short",
-                        day: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
                       })}
                     </span>
                   </div>
@@ -363,17 +307,9 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
                     <span className='text-sm font-medium'>
                       {new Date(payment.due_date).toLocaleDateString("en-US", {
                         year: "numeric",
-                        month: "short",
-                        day: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
                       })}
-                    </span>
-                  </div>
-                  <div className='flex justify-between'>
-                    <span className='text-sm text-muted-foreground'>
-                      Payment Method:
-                    </span>
-                    <span className='text-sm font-medium'>
-                      {payment.method}
                     </span>
                   </div>
                 </div>
@@ -384,24 +320,17 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
 
             {/* Line Items */}
             <div className='space-y-3'>
-              <div className='grid grid-cols-12 gap-4 text-sm font-semibold'>
-                <div className='col-span-6'>Description</div>
-                <div className='col-span-2 text-right'>Type</div>
-                <div className='col-span-2 text-right'>Qty</div>
-                <div className='col-span-2 text-right'>Amount</div>
+              <div className='grid grid-cols-12 gap-4 text-sm font-semibold bg-[#735741] text-white p-2 rounded'>
+                <div className='col-span-1'>#</div>
+                <div className='col-span-7'>Description</div>
+                <div className='col-span-2 text-right'>Quantity</div>
+                <div className='col-span-2 text-right'>Price (USD)</div>
               </div>
 
-              <Separator />
-
-              <div className='grid grid-cols-12 gap-4 text-sm'>
-                <div className='col-span-6'>
+              <div className='grid grid-cols-12 gap-4 text-sm p-2'>
+                <div className='col-span-1'>1</div>
+                <div className='col-span-7'>
                   <p className='font-medium'>{payment.description}</p>
-                  <p className='text-xs text-muted-foreground'>
-                    Payment Type: {payment.type.replace("_", " ")}
-                  </p>
-                </div>
-                <div className='col-span-2 text-right capitalize'>
-                  {payment.type.replace("_", " ")}
                 </div>
                 <div className='col-span-2 text-right'>1</div>
                 <div className='col-span-2 text-right font-medium'>
@@ -413,33 +342,65 @@ const GenerateInvoiceDialog: React.FC<GenerateInvoiceDialogProps> = ({
 
               {/* Totals */}
               <div className='space-y-2'>
-                <div className='flex justify-between text-sm'>
-                  <span>Subtotal</span>
+                <div className='flex justify-between text-lg font-bold'>
+                  <span>Sub-Total (USD):</span>
                   <span>
                     {formatCurrency(payment.amount, payment.currency)}
                   </span>
                 </div>
-                <div className='flex justify-between text-sm'>
-                  <span>Tax (18%)</span>
-                  <span>{formatCurrency(taxAmount, payment.currency)}</span>
-                </div>
-                <Separator />
-                <div className='flex justify-between text-lg font-bold'>
-                  <span>Total</span>
-                  <span>{formatCurrency(totalAmount, payment.currency)}</span>
-                </div>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Payment Information */}
+            {/* <div>
+              <p className='text-sm font-semibold mb-2 text-[#735741]'>
+                Payment Information:
+              </p>
+              <div className='text-xs space-y-1 text-muted-foreground'>
+                <p>BANK NAME: NMB BANK PLC</p>
+                <p>SWIFT CODE: NMIBTZTZ</p>
+                <p>BRANCH CODE: 428</p>
+                <p>ACCOUNT NUMBER (EURO): 42810015688</p>
+                <p>ACCOUNT NUMBER (USD): 42810013862</p>
+                <p>ACCOUNT NAME: LION TRACK SAFARI</p>
+                <p className='mt-2'>
+                  <span className='font-semibold text-[#735741]'>
+                    Secure Online Payment:{" "}
+                  </span>
+                  <a
+                    href='https://store.pesapal.com/liontracksafaricompany'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='text-blue-600 hover:underline'>
+                    https://store.pesapal.com/liontracksafaricompany
+                  </a>
+                </p>
+              </div>
+            </div> */}
 
             {notes && (
               <>
                 <Separator />
                 <div>
-                  <p className='text-sm font-semibold mb-1'>Notes:</p>
+                  <p className='text-sm font-semibold mb-1 text-[#735741]'>
+                    Notes:
+                  </p>
                   <p className='text-sm text-muted-foreground'>{notes}</p>
                 </div>
               </>
             )}
+
+            <Separator />
+
+            {/* Signature */}
+            <div>
+              <p className='text-sm font-semibold mb-2'>
+                Director's Signature:
+              </p>
+              <div className='border-b-2 border-black w-60 mt-8'></div>
+            </div>
           </div>
         </div>
 
