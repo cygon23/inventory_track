@@ -55,7 +55,7 @@ const AllBookings: React.FC = () => {
       <Card className='safari-card'>
         <CardHeader>
           <CardTitle>Bookings ({recentBookings.length})</CardTitle>
-          <CardDescription>All booking records</CardDescription>
+          <CardDescription>All booking records...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='space-y-4'>

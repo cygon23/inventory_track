@@ -23,7 +23,7 @@ interface Booking {
     created_at: string;
 }
 
-export const useDashboardData = () => {
+export const useDashboardData = (bookingsLimit?: number) => {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<DashboardStats>({
         totalBookings: 0,
@@ -92,20 +92,26 @@ export const useDashboardData = () => {
     };
 
     const fetchRecentBookings = async () => {
-        const { data } = await supabase
+        let query = supabase
             .from("bookings")
             .select("*")
-            .order("created_at", { ascending: false })
-            .limit(5);
+            .order("created_at", { ascending: false });
+        
+        // Apply limit only if provided
+        if (bookingsLimit !== undefined) {
+            query = query.limit(bookingsLimit);
+        }
+        
+        const { data } = await query;
         return data || [];
     };
 
     const fetchUnreadMessages = async () => {
-    const { data } = await supabase
-        .from('conversation_details')
-        .select('unread_count');
-    return data?.reduce((sum, conv) => sum + conv.unread_count, 0) || 0;
-};
+        const { data } = await supabase
+            .from('conversation_details')
+            .select('unread_count');
+        return data?.reduce((sum, conv) => sum + conv.unread_count, 0) || 0;
+    };
 
     const fetchDashboardData = async () => {
         try {
@@ -155,8 +161,8 @@ export const useDashboardData = () => {
                     thisMonthRevenue,
                     lastMonthRevenue,
                 ),
-                 unreadMessages,
-                 unreadMessagesChange: 0,  
+                unreadMessages,
+                unreadMessagesChange: 0,  
             });
 
             setRecentBookings(bookingsData);
@@ -170,7 +176,7 @@ export const useDashboardData = () => {
 
     useEffect(() => {
         fetchDashboardData();
-    }, []);
+    }, [bookingsLimit]);
 
     return {
         loading,
